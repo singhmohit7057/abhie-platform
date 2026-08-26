@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -33,7 +34,18 @@ export function Login({ variant = 'store' }: LoginProps) {
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const { error } = await signInWithEmail(email, password)
+    let loginEmail = email
+    if (!email.includes('@')) {
+      const { data } = await supabase.from('profiles').select('email').eq('user_id', email).single()
+      if (data?.email) {
+        loginEmail = data.email
+      } else {
+        toast.error('User ID not found')
+        setLoading(false)
+        return
+      }
+    }
+    const { error } = await signInWithEmail(loginEmail, password)
     if (error) {
       toast.error(error.message)
     } else {
@@ -75,7 +87,7 @@ export function Login({ variant = 'store' }: LoginProps) {
           <p className="mt-2 text-sm text-gray-500">{titles[variant]}</p>
         </div>
 
-        <div className="mb-6 flex rounded-lg bg-gray-100 p-1">
+        {variant === 'store' && <div className="mb-6 flex rounded-lg bg-gray-100 p-1">
           <button
             onClick={() => setTab('email')}
             className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
@@ -96,19 +108,19 @@ export function Login({ variant = 'store' }: LoginProps) {
           >
             Phone OTP
           </button>
-        </div>
+        </div>}
 
         {tab === 'email' ? (
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <label className="block text-sm font-medium text-gray-700">Username</label>
               <input
-                type="email"
+                type="text" autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none"
-                placeholder="admin@abhie.in"
+                placeholder=""
               />
             </div>
             <div>
@@ -120,7 +132,7 @@ export function Login({ variant = 'store' }: LoginProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none"
-                  placeholder="Enter password"
+                  placeholder=""
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

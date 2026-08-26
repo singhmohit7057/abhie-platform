@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { Clock } from 'lucide-react'
 
 const modules = [
   {
@@ -105,23 +104,19 @@ const modules = [
 export function Dashboard() {
   return (
     <div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto max-w-6xl grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {modules.map((mod) => (
-          <div key={mod.title} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center gap-3 rounded-t-lg bg-red-800 px-4 py-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
-                  <Clock size={16} className="text-red-800" />
-                </div>
-              </div>
-              <h3 className="font-semibold text-white">{mod.title}</h3>
+          <div key={mod.title} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center gap-3 rounded-t-xl bg-red-800 px-4 py-3">
+              <img src="/enterprise_icon.png" alt="" className="h-10 w-10" />
+              <h3 className="text-base font-semibold text-white">{mod.title}</h3>
             </div>
-            <div className="px-4 py-3">
+            <div className="px-4 py-2">
               {mod.links.map((link) => (
                 <Link
                   key={link.path + link.label}
                   to={link.path}
-                  className="block py-1 text-sm text-blue-700 hover:text-blue-900 hover:underline"
+                  className="block border-b border-dashed border-gray-200 py-1.5 text-sm text-gray-900 hover:underline"
                 >
                   {link.label}
                 </Link>

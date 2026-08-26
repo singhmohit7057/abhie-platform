@@ -11,11 +11,12 @@ export function EditAccount() {
     full_name: profile?.full_name || '',
     email: profile?.email || '',
     phone: profile?.phone || '',
+    user_id: (profile as any)?.user_id || '',
   })
 
   useEffect(() => {
     if (profile) {
-      setForm({ full_name: profile.full_name, email: profile.email, phone: profile.phone || '' })
+      setForm({ full_name: profile.full_name, email: profile.email, phone: profile.phone || '', user_id: (profile as any)?.user_id || '' })
     }
   }, [profile])
   const [loading, setLoading] = useState(false)
@@ -33,7 +34,7 @@ export function EditAccount() {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: form.full_name })
+      .update({ full_name: form.full_name, user_id: form.user_id || null })
       .eq('id', user.id)
 
     if (error) {
@@ -66,6 +67,10 @@ export function EditAccount() {
                   <td className="py-2 pr-6 font-medium text-gray-700">Phone:</td>
                   <td className="py-2 text-gray-900">{form.phone || '—'}</td>
                 </tr>
+                <tr>
+                  <td className="py-2 pr-6 font-medium text-gray-700">User ID:</td>
+                  <td className="py-2 text-gray-900">{form.user_id || '—'}</td>
+                </tr>
               </tbody>
             </table>
             <div className="mt-4">
@@ -87,6 +92,10 @@ export function EditAccount() {
                 <tr>
                   <td className="py-2 pr-6 font-medium text-gray-700">Phone:</td>
                   <td className="py-2"><input className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm" value={form.phone} disabled /></td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-6 font-medium text-gray-700">User ID:</td>
+                  <td className="py-2"><input className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm" value={form.user_id} disabled /></td>
                 </tr>
               </tbody>
             </table>

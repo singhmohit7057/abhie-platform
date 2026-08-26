@@ -14,9 +14,9 @@ export function MerchantLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-100">
       {/* Top Bar */}
-      <header className="flex items-center justify-between bg-white px-6 py-3 shadow-sm">
+      <header className="flex items-center justify-between bg-white px-6 py-2 shadow-sm">
         <div className="flex items-center gap-3">
-          <img src="/abhilogo.webp" alt="Abhi-E" className="h-10 object-contain" />
+          <img src="/abhilogo.webp" alt="Abhi-E" className="h-7 object-contain" />
           <span className="text-sm text-gray-600">Welcome <strong>{profile?.full_name || 'Merchant'}</strong></span>
         </div>
         <div className="flex items-center gap-4">
@@ -25,7 +25,7 @@ export function MerchantLayout() {
           </span>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-sm text-red-700 hover:text-red-900"
+            className="flex items-center gap-1.5 text-sm text-gray-900 hover:text-gray-700"
           >
             <LogOut size={16} />
             LogOut
@@ -41,7 +41,7 @@ export function MerchantLayout() {
       </Link>
 
       {/* Page Content */}
-      <main className="flex-1 px-6 py-6">
+      <main className="flex-1 px-8 py-6">
         <Outlet />
       </main>
 
