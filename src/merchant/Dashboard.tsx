@@ -98,9 +98,6 @@ export function MerchantDashboard() {
         ))}
       </div>
 
-      <div className="mt-10 text-center text-sm text-gray-500">
-        Copyright &copy; 2024 <span className="text-red-700">Abhi-e</span>. All Rights Reserved
-      </div>
     </div>
   )
 }

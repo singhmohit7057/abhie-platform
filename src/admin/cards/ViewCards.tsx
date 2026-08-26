@@ -135,7 +135,6 @@ export function ViewCards() {
         </div>
       </div>
 
-      <p className="mb-2 text-sm font-medium text-red-700">Showing 1 to {Math.min(10, filtered.length)} of {filtered.length} records</p>
 
       <DataTable columns={columns} data={filtered} loading={loading} searchable={false} />
 

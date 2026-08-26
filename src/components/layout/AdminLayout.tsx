@@ -12,7 +12,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="flex min-h-screen flex-col bg-gray-100">
       {/* Top Bar */}
       <header className="flex items-center justify-between bg-white px-6 py-3 shadow-sm">
         <div className="flex items-center gap-3">
@@ -41,9 +41,14 @@ export function AdminLayout() {
       </Link>
 
       {/* Page Content */}
-      <main className="mx-auto max-w-7xl p-6">
+      <main className="flex-1 px-6 py-6">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-white py-4 text-center text-sm text-gray-500">
+        Copyright &copy; 2024 <span className="text-red-700">Abhi-e</span>. All Rights Reserved
+      </footer>
     </div>
   )
 }

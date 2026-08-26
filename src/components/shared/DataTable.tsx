@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search } from 'lucide-react'
 
 interface Column<T> {
   key: keyof T | string
@@ -102,29 +102,36 @@ export function DataTable<T extends { id: string }>({
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <span>
-            Showing {page * pageSize + 1}-{Math.min((page + 1) * pageSize, filtered.length)} of {filtered.length}
-          </span>
-          <div className="flex gap-1">
+      <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 text-sm text-gray-600">
+        <span>
+          {filtered.length > 0 ? `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length} total records` : '0 records'}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 0}
+            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-30"
+          >
+            &lt;&lt; Prev
+          </button>
+          {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => (
             <button
-              onClick={() => setPage(page - 1)}
-              disabled={page === 0}
-              className="rounded p-1 hover:bg-gray-100 disabled:opacity-30"
+              key={i}
+              onClick={() => setPage(i)}
+              className={`rounded border px-2 py-1 text-xs ${page === i ? 'border-blue-500 bg-blue-50 font-bold' : 'border-gray-300 hover:bg-gray-100'}`}
             >
-              <ChevronLeft size={18} />
+              {i + 1}
             </button>
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={page >= totalPages - 1}
-              className="rounded p-1 hover:bg-gray-100 disabled:opacity-30"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
+          ))}
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page >= totalPages - 1}
+            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-30"
+          >
+            Next &gt;&gt;
+          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

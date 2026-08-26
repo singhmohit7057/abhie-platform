@@ -88,7 +88,6 @@ export function ViewVouchers() {
 
       <DataTable columns={columns} data={filtered} loading={loading} searchable={false} />
 
-      <p className="mt-2 text-sm text-red-700">{filtered.length > 0 ? `1-${filtered.length} of ${filtered.length} total` : '0 total'}</p>
 
       <div className="mt-4 flex justify-end hidden">
         <Link to="/admin/vouchers/add">
