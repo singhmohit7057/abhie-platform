@@ -1,10 +1,53 @@
-import { Outlet, useNavigate, Link } from 'react-router-dom'
+import { Outlet, useNavigate, Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { LogOut } from 'lucide-react'
+import { LogOut, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react'
+import { useState } from 'react'
+
+const sidebarItems = [
+  { label: 'Manage Merchant', links: [{ label: 'Add Merchant', path: '/admin/merchants/add' }, { label: 'View Merchant', path: '/admin/merchants' }] },
+  { label: 'Manage Clients', links: [{ label: 'View Clients', path: '/admin/clients' }] },
+  { label: 'Manage Cards', links: [{ label: 'Add Cards', path: '/admin/cards/add' }, { label: 'View Cards', path: '/admin/cards' }] },
+  { label: 'Manage Payments', links: [{ label: 'View Payments', path: '/admin/payments' }] },
+  { label: 'Manage Reports', links: [{ label: 'Reseller Reports', path: '/admin/reports?type=reseller' }, { label: 'Payment Reports', path: '/admin/reports?type=payment' }, { label: 'Membership Card Reports', path: '/admin/reports?type=membership' }] },
+  { label: 'Manage Category', links: [{ label: 'Add Category', path: '/admin/categories/add' }, { label: 'View Categories', path: '/admin/categories' }] },
+  { label: 'Manage Items', links: [{ label: 'Add Items', path: '/admin/items' }, { label: 'View Items', path: '/admin/items' }] },
+  { label: 'Manage Coupons', links: [{ label: 'Add Coupons', path: '/admin/coupons/add' }, { label: 'View Coupons', path: '/admin/coupons' }] },
+  { label: 'Manage Vouchers', links: [{ label: 'Add Vouchers', path: '/admin/vouchers/add' }, { label: 'View Vouchers', path: '/admin/vouchers' }] },
+  { label: 'Manage Bookings/Tickets', links: [{ label: 'View Bookings', path: '/admin/bookings' }] },
+  { label: 'Order History', links: [{ label: 'Users Orders', path: '/admin/orders' }] },
+  { label: 'Manage Account', links: [{ label: 'Change Password', path: '/admin/accounts/password' }, { label: 'Edit Account', path: '/admin/accounts/edit' }] },
+  { label: 'Manage Complaints', links: [{ label: 'View Complaints', path: '/admin/feedback' }] },
+  { label: 'Manage Feedbacks', links: [{ label: 'View Feedbacks', path: '/admin/feedback/feedbacks' }] },
+  { label: 'Audit Trail', links: [{ label: 'View Audit Trail', path: '/admin/audit' }] },
+]
+
+function SidebarSection({ item }: { item: typeof sidebarItems[0] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div>
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-1.5 py-1 text-xs text-gray-800 hover:text-[#bf282d]">
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <FolderOpen size={14} className="text-yellow-600" />
+        <span className="font-medium">{item.label}</span>
+      </button>
+      {open && (
+        <div className="ml-7 space-y-0.5">
+          {item.links.map(link => (
+            <NavLink key={link.path + link.label} to={link.path} className={({ isActive }) => `block py-0.5 text-xs ${isActive ? 'text-[#bf282d] font-medium' : 'text-gray-600 hover:text-[#bf282d]'}`}>
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function AdminLayout() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isDashboard = location.pathname === '/admin'
 
   const handleLogout = async () => {
     await signOut()
@@ -34,16 +77,36 @@ export function AdminLayout() {
       </header>
 
       {/* Title Banner */}
-      <Link to="/admin" className="block bg-red-800 py-2.5 text-center hover:bg-red-900 transition">
+      <Link to="/admin" className="block bg-[#bf282d] py-2.5 text-center hover:bg-[#a32028] transition">
         <h1 className="text-base font-semibold text-white">
           Abhi-E (Administrator Panel)
         </h1>
       </Link>
 
-      {/* Page Content */}
-      <main className="flex-1 px-8 py-6">
-        <Outlet />
-      </main>
+      {/* Content with Sidebar */}
+      <div className={`flex flex-1 ${isDashboard ? '' : 'px-6 py-6'}`}>
+        {isDashboard ? (
+          <main className="flex-1 px-8 py-6">
+            <Outlet />
+          </main>
+        ) : (
+          <div className="flex flex-1 gap-5">
+            {/* Sidebar */}
+            <aside className="hidden w-60 shrink-0 rounded-lg border border-gray-300 bg-white p-4 lg:block">
+              <div className="space-y-1">
+                {sidebarItems.map(item => (
+                  <SidebarSection key={item.label} item={item} />
+                ))}
+              </div>
+            </aside>
+
+            {/* Page Content */}
+            <main className="flex-1 rounded-lg border border-gray-300 bg-white p-6">
+              <Outlet />
+            </main>
+          </div>
+        )}
+      </div>
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white py-4 text-center text-sm text-gray-500">

@@ -34,7 +34,7 @@ export function MerchantLayout() {
       </header>
 
       {/* Title Banner */}
-      <Link to="/merchant" className="block bg-red-800 py-4 text-center hover:bg-red-900 transition">
+      <Link to="/merchant" className="block bg-[#bf282d] py-4 text-center hover:bg-[#a32028] transition">
         <h1 className="text-xl font-semibold text-white">
           Merchant Dashboard
         </h1>

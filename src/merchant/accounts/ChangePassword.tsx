@@ -2,42 +2,45 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 export function MerchantChangePassword() {
   const [form, setForm] = useState({ oldPassword: '', password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(false)
   const [show, setShow] = useState({ old: false, new: false, confirm: false })
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    setSuccess('')
     if (!form.oldPassword) {
-      return toast.error('Enter your current password to continue')
+      return setError('Enter your current password to continue')
     }
     if (form.password !== form.confirmPassword) {
-      return toast.error('Passwords do not match')
+      return setError('Passwords do not match')
     }
     if (form.password.length < 6) {
-      return toast.error('Password must be at least 6 characters')
+      return setError('Password must be at least 6 characters')
     }
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) {
-      toast.error('Unable to verify user')
+      setError('Unable to verify user')
       setLoading(false)
       return
     }
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email, password: form.oldPassword })
     if (signInError) {
-      toast.error('Current password is incorrect')
+      setError('Current password is incorrect')
       setLoading(false)
       return
     }
-    const { error } = await supabase.auth.updateUser({ password: form.password })
-    if (error) {
-      toast.error(error.message)
+    const { error: updateError } = await supabase.auth.updateUser({ password: form.password })
+    if (updateError) {
+      setError(updateError.message)
     } else {
-      toast.success('Password updated successfully')
+      setSuccess('Password updated successfully')
       setForm({ oldPassword: '', password: '', confirmPassword: '' })
     }
     setLoading(false)
@@ -75,6 +78,8 @@ export function MerchantChangePassword() {
               </button>
             </div>
           </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {success && <p className="text-sm text-green-600">{success}</p>}
           <Button type="submit" disabled={loading}>
             {loading ? 'Updating...' : 'Update Password'}
           </Button>

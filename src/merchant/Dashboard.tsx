@@ -74,7 +74,7 @@ export function MerchantDashboard() {
       <div className="mx-auto max-w-6xl grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {modules.map((mod) => (
           <div key={mod.title} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center gap-3 rounded-t-xl bg-red-800 px-4 py-3">
+            <div className="flex items-center gap-3 rounded-t-xl bg-[#bf282d] px-4 py-3">
               <img src="/enterprise_icon.png" alt="" className="h-10 w-10" />
               <h3 className="text-base font-semibold text-white">{mod.title}</h3>
             </div>
