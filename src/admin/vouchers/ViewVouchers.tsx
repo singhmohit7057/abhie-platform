@@ -36,15 +36,15 @@ export function ViewVouchers() {
     { key: 'valid_until', label: 'Expiry Date', render: (v: Voucher) => formatDate(v.valid_until) },
     {
       key: 'is_active', label: 'Status',
-      render: (v: Voucher) => <span className={v.is_active ? 'text-green-700' : 'text-gray-500'}>{v.is_active ? 'Active' : 'Inactive'}</span>,
+      render: (v: Voucher) => <span className={v.is_active ? 'text-gray-900' : 'text-gray-900'}>{v.is_active ? 'Active' : 'Inactive'}</span>,
     },
     { key: 'members_only', label: 'Members Only', render: () => 'No' },
     {
       key: 'actions', label: 'Action',
       render: (v: Voucher) => (
         <div className="flex gap-2">
-          <Link to={`/admin/vouchers/add?edit=${v.id}`} className="text-blue-600 hover:text-blue-800"><Pencil size={16} /></Link>
-          <button onClick={() => remove(v.id)} className="text-blue-600 hover:text-red-800"><Trash2 size={16} /></button>
+          <Link to={`/admin/vouchers/add?edit=${v.id}`} className="text-gray-900 hover:text-gray-700"><Pencil size={16} /></Link>
+          <button onClick={() => remove(v.id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
         </div>
       ),
     },

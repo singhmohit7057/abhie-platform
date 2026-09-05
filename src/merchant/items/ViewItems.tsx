@@ -82,7 +82,7 @@ export function MerchantViewItems() {
       key: 'actions', label: 'Actions',
       render: (i: Item) => (
         <div className="flex gap-2">
-          <button onClick={() => openEdit(i)} className="text-blue-600 hover:text-blue-800"><Pencil size={16} /></button>
+          <button onClick={() => openEdit(i)} className="text-gray-900 hover:text-gray-700"><Pencil size={16} /></button>
           {i.approval_status === 'pending' && (
             <button onClick={() => remove(i.id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
           )}

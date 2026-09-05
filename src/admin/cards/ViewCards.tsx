@@ -71,13 +71,13 @@ export function ViewCards() {
     { key: 'points', label: 'Reward Points' },
     {
       key: 'is_active', label: 'Status',
-      render: (c: Card) => <span className={c.client_id ? 'text-green-700' : 'text-gray-500'}>{c.client_id ? 'Issued' : 'N/A'}</span>,
+      render: (c: Card) => <span className={c.client_id ? 'text-gray-900' : 'text-gray-900'}>{c.client_id ? 'Issued' : 'N/A'}</span>,
     },
     { key: 'merchant', label: 'Merchant Name', render: (c: Card) => getMerchantName(c.merchant_id) },
     {
       key: 'delete', label: 'Delete',
       render: (c: Card) => (
-        <button onClick={() => remove(c.id)} className="text-blue-600 hover:text-red-800"><Trash2 size={18} /></button>
+        <button onClick={() => remove(c.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
       ),
     },
   ]

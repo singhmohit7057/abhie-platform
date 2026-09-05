@@ -17,10 +17,10 @@ export function ViewCategories() {
   const columns = [
     { key: 'sl', label: 'Sl. No.', render: (_c: Category, index: number) => index + 1 },
     { key: 'name', label: 'Title' },
-    { key: 'is_active', label: 'Status', render: (cat: Category) => <strong className={cat.is_active ? 'text-green-700' : 'text-gray-500'}>{cat.is_active ? 'Active' : 'Inactive'}</strong> },
+    { key: 'is_active', label: 'Status', render: (cat: Category) => <strong className={cat.is_active ? 'text-gray-900' : 'text-gray-900'}>{cat.is_active ? 'Active' : 'Inactive'}</strong> },
     {
       key: 'edit', label: 'Edit',
-      render: (cat: Category) => <Link to={`/admin/categories/add?edit=${cat.id}`} className="text-blue-600 hover:text-blue-800"><Pencil size={18} /></Link>,
+      render: (cat: Category) => <Link to={`/admin/categories/add?edit=${cat.id}`} className="text-gray-900 hover:text-gray-700"><Pencil size={18} /></Link>,
     },
     {
       key: 'delete', label: 'Delete',

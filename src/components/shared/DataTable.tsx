@@ -65,21 +65,21 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm border border-gray-300" style={{ borderCollapse: 'collapse' }}>
+          <thead className="bg-gray-100">
             <tr>
               {columns.map((col) => (
-                <th key={String(col.key)} className="px-4 py-3 font-medium text-gray-600">
+                <th key={String(col.key)} className="border border-gray-300 px-4 py-3 font-bold text-gray-900">
                   {col.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody>
             {paged.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={columns.length} className="border border-gray-300 px-4 py-8 text-center text-gray-900">
                   No data found
                 </td>
               </tr>
@@ -91,7 +91,7 @@ export function DataTable<T extends { id: string }>({
                   className={`bg-white hover:bg-gray-50 ${onRowClick ? 'cursor-pointer' : ''}`}
                 >
                   {columns.map((col) => (
-                    <td key={String(col.key)} className="px-4 py-3 text-gray-700">
+                    <td key={String(col.key)} className="border border-gray-300 px-4 py-3 text-gray-900">
                       {col.render ? col.render(item, page * pageSize + idx) : String(getValue(item, String(col.key)) ?? '-')}
                     </td>
                   ))}
@@ -102,7 +102,7 @@ export function DataTable<T extends { id: string }>({
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 text-sm text-gray-600">
+      <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 text-sm text-gray-900">
         <span>
           {filtered.length > 0 ? `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length} total records` : '0 records'}
         </span>
@@ -118,7 +118,7 @@ export function DataTable<T extends { id: string }>({
             <button
               key={i}
               onClick={() => setPage(i)}
-              className={`rounded border px-2 py-1 text-xs ${page === i ? 'border-blue-500 bg-blue-50 font-bold' : 'border-gray-300 hover:bg-gray-100'}`}
+              className={`rounded border px-2 py-1 text-xs ${page === i ? 'border-red-500 bg-red-50 font-bold' : 'border-gray-300 hover:bg-gray-100'}`}
             >
               {i + 1}
             </button>

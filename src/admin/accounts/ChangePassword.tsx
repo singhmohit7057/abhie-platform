@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
 
 export function ChangePassword() {
+  const { signOut } = useAuth()
   const [form, setForm] = useState({ oldPassword: '', password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(false)
   const [show, setShow] = useState({ old: false, new: false, confirm: false })
@@ -18,7 +20,7 @@ export function ChangePassword() {
       return setError('Enter your current password to continue')
     }
     if (form.password !== form.confirmPassword) {
-      return setError('Passwords do not match')
+      return setError('New & Confirm password is not same')
     }
     if (form.password.length < 6) {
       return setError('Password must be at least 6 characters')
@@ -38,10 +40,11 @@ export function ChangePassword() {
     }
     const { error: updateError } = await supabase.auth.updateUser({ password: form.password })
     if (updateError) {
-      setError(updateError.message)
+      setError(updateError.message.includes('different') ? 'New password cannot be same as old password' : updateError.message)
     } else {
-      setSuccess('Password updated successfully')
-      setForm({ oldPassword: '', password: '', confirmPassword: '' })
+      await signOut()
+      window.location.href = '/admin/login?msg=password_updated'
+      return
     }
     setLoading(false)
   }
@@ -78,11 +81,13 @@ export function ChangePassword() {
               </button>
             </div>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {success && <p className="text-sm text-green-600">{success}</p>}
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Updating...' : 'Update Password'}
-          </Button>
+          {error && <p className="text-center text-sm font-bold text-red-600">{error}</p>}
+          {success && <p className="text-center text-sm font-bold text-green-600">{success}</p>}
+          <div className="text-center">
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Updating...' : 'Update Password'}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

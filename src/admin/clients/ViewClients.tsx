@@ -33,7 +33,7 @@ export function ViewClients() {
     { key: 'card', label: 'Card Number', render: (c: Client) => getCardNumber(c.id) },
     { key: 'points', label: 'Available Points', render: (c: Client) => getAvailablePoints(c.id) },
     { key: 'city', label: 'City', render: (c: Client) => c.city || '—' },
-    { key: 'status', label: 'Status', render: (c: any) => <span className={(c.is_active ?? true) ? 'text-green-700' : 'text-gray-500'}>{(c.is_active ?? true) ? 'Active' : 'Inactive'}</span> },
+    { key: 'status', label: 'Status', render: (c: any) => <span className={(c.is_active ?? true) ? 'text-gray-900' : 'text-gray-900'}>{(c.is_active ?? true) ? 'Active' : 'Inactive'}</span> },
     { key: 'membership', label: 'Membership', render: (c: any) => c.membership_status === 'yes' ? 'Yes' : 'No' },
     { key: 'merchant_id', label: 'Created By (Merchant)', render: (c: Client) => getMerchantName(c.merchant_id) },
   ]
@@ -41,7 +41,7 @@ export function ViewClients() {
   return (
     <div>
       <h1 className="mb-2 text-xl font-bold text-red-700">View Clients</h1>
-      <p className="mb-4 text-sm text-gray-500">Clients created by merchants. Merchants manage their own clients.</p>
+      <p className="mb-4 text-sm text-gray-900">Clients created by merchants. Merchants manage their own clients.</p>
       <DataTable columns={columns} data={data} loading={loading} />
     </div>
   )

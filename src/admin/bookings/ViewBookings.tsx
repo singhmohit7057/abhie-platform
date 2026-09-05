@@ -60,7 +60,7 @@ export function ViewBookings() {
       key: 'actions', label: 'Actions',
       render: (b: Booking) => (
         <div className="flex gap-2">
-          <button onClick={() => openEdit(b)} className="text-blue-600 hover:text-blue-800"><Pencil size={16} /></button>
+          <button onClick={() => openEdit(b)} className="text-gray-900 hover:text-gray-700"><Pencil size={16} /></button>
           <button onClick={() => remove(b.id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
         </div>
       ),

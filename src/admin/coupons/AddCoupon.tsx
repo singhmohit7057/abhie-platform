@@ -83,7 +83,7 @@ export function AddCoupon() {
                       {merchants.map(m => <option key={m.id} value={m.id}>{m.store_name}</option>)}
                       <option value="website">Website (Shop Abhie)</option>
                     </select>
-                    <span className={`text-xs text-gray-500 ${(!form.merchant_id || form.merchant_id === 'website') ? '' : 'invisible'}`}>Coupons are applied on Shop Abhie online store only</span>
+                    <span className={`text-xs text-gray-900 ${(!form.merchant_id || form.merchant_id === 'website') ? '' : 'invisible'}`}>Coupons are applied on Shop Abhie online store only</span>
                   </div>
                 </td>
               </tr>

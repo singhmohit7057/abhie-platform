@@ -57,7 +57,7 @@ export function ViewMerchants() {
     }},
     {
       key: 'edit', label: 'Edit',
-      render: (m: Merchant) => <Link to={`/admin/merchants/add?edit=${m.id}`} className="text-blue-600 hover:text-blue-800"><Pencil size={18} /></Link>,
+      render: (m: Merchant) => <Link to={`/admin/merchants/add?edit=${m.id}`} className="text-gray-900 hover:text-gray-700"><Pencil size={18} /></Link>,
     },
     {
       key: 'view_panel', label: 'View Panel',
@@ -65,7 +65,7 @@ export function ViewMerchants() {
     },
     {
       key: 'is_active', label: 'Merchant Status',
-      render: (m: Merchant) => <strong className={m.is_active ? 'text-green-700' : 'text-gray-500'}>{m.is_active ? 'Active' : 'Inactive'}</strong>,
+      render: (m: Merchant) => <strong className={m.is_active ? 'text-gray-900' : 'text-gray-900'}>{m.is_active ? 'Active' : 'Inactive'}</strong>,
     },
   ]
 

@@ -96,7 +96,7 @@ export function AddBilling() {
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Bill Amount:</td>
                 <td className="py-2">
                   <input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="number" value={form.bill_amount} onChange={(e) => setForm({ ...form, bill_amount: e.target.value })} />
-                  <p className="mt-0.5 text-xs text-gray-500">(Auto-calculated from products or enter manually)</p>
+                  <p className="mt-0.5 text-xs text-gray-900">(Auto-calculated from products or enter manually)</p>
                 </td>
               </tr>
               <tr className="border-b border-gray-100">

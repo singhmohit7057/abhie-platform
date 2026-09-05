@@ -80,7 +80,7 @@ export function AddCards() {
       <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
         <strong>Card Format:</strong> ABHIE + [1=Offline, 2=Online] + 0 + [ddmmyyyy] + [5-digit sequence]
         <br />
-        <span className="text-xs text-gray-500">Example: {offlinePrefix}00001</span>
+        <span className="text-xs text-gray-900">Example: {offlinePrefix}00001</span>
       </div>
 
       <div className="rounded-lg border bg-white p-6">

@@ -82,7 +82,7 @@ export function MerchantReports() {
                 </tr>
               ))}
               {data.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">No data available</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-900">No data available</td></tr>
               )}
             </tbody>
           </table>

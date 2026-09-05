@@ -24,6 +24,7 @@ export function Login({ variant = 'store' }: LoginProps) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const defaultRedirect = variant === 'admin' ? '/admin' : variant === 'merchant' ? '/merchant' : '/'
+  const msg = searchParams.get('msg')
   const redirectTo = searchParams.get('redirect') || defaultRedirect
 
   const titles = {
@@ -38,18 +39,18 @@ export function Login({ variant = 'store' }: LoginProps) {
     setLoading(true)
     let loginEmail = email
     if (!email.includes('@')) {
-      const { data } = await supabase.from('profiles').select('email').eq('user_id', email).single()
+      const { data } = await supabase.from('profiles').select('email').ilike('user_id', email).single()
       if (data?.email) {
         loginEmail = data.email
       } else {
-        setError('User ID not found')
+        setError('Invalid username')
         setLoading(false)
         return
       }
     }
     const { error: loginError } = await signInWithEmail(loginEmail, password)
     if (loginError) {
-      setError(loginError.message)
+      setError('Password is not correct')
     } else {
       navigate(redirectTo)
     }
@@ -88,6 +89,13 @@ export function Login({ variant = 'store' }: LoginProps) {
           <img src="/abhilogo.webp" alt="Abhi-E" className="mx-auto h-14 object-contain" />
           <p className="mt-2 text-sm text-gray-500">{titles[variant]}</p>
         </div>
+
+        {msg === 'password_updated' && (
+          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-center">
+            <p className="text-sm font-bold text-green-700">Success ! {variant === 'admin' ? 'Admin' : 'Merchant'} Password updated successfully.</p>
+            <p className="text-xs text-green-600">Please Login again with your new password.</p>
+          </div>
+        )}
 
         {variant === 'store' && <div className="mb-6 flex rounded-lg bg-gray-100 p-1">
           <button
@@ -141,7 +149,7 @@ export function Login({ variant = 'store' }: LoginProps) {
                 </button>
               </div>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-center text-sm font-bold text-red-600">{error}</p>}
             <button
               type="submit"
               disabled={loading}

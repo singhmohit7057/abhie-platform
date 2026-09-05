@@ -52,14 +52,14 @@ const modules = [
   {
     title: 'Manage Items',
     links: [
-      { label: 'Add Items', path: '/admin/items?action=add' },
+      { label: 'Add Items', path: '/admin/items/add' },
       { label: 'View Items', path: '/admin/items' },
     ],
   },
   {
     title: 'Manage Payments',
     links: [
-      { label: 'Add Payments', path: '/admin/payments?action=add' },
+      { label: 'Add Payments', path: '/admin/payments/add' },
       { label: 'View Payments', path: '/admin/payments' },
     ],
   },
@@ -116,7 +116,7 @@ export function Dashboard() {
                 <Link
                   key={link.path + link.label}
                   to={link.path}
-                  className="block border-b border-dashed border-gray-200 py-1.5 text-sm text-gray-900 hover:underline"
+                  className="block border-b border-dashed border-gray-400 py-1.5 text-sm text-gray-900 hover:underline"
                 >
                   {link.label}
                 </Link>

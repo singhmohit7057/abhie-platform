@@ -37,13 +37,13 @@ export function ManageClients() {
     { key: 'card', label: 'Card No', render: (c: Client) => getCardNumber(c) },
     { key: 'points', label: 'Points', render: (c: Client) => getPoints(c) },
     { key: 'city', label: 'City', render: (c: Client) => c.city || '—' },
-    { key: 'status', label: 'Status', render: (c: any) => <span className={(c.is_active ?? true) ? 'text-green-700' : 'text-gray-500'}>{(c.is_active ?? true) ? 'Active' : 'Inactive'}</span> },
+    { key: 'status', label: 'Status', render: (c: any) => <span className={(c.is_active ?? true) ? 'text-gray-900' : 'text-gray-900'}>{(c.is_active ?? true) ? 'Active' : 'Inactive'}</span> },
     { key: 'membership', label: 'Membership', render: (c: any) => c.membership_status === 'yes' ? 'Yes' : 'No' },
     {
       key: 'actions', label: 'Actions',
       render: (c: Client) => (
         <div className="flex gap-2">
-          <Link to={`/merchant/clients/add?edit=${c.id}`} className="text-blue-600 hover:text-blue-800"><Pencil size={16} /></Link>
+          <Link to={`/merchant/clients/add?edit=${c.id}`} className="text-gray-900 hover:text-gray-700"><Pencil size={16} /></Link>
           <button onClick={() => remove(c.id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
         </div>
       ),

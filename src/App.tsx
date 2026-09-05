@@ -18,7 +18,9 @@ import { AddVoucher } from './admin/vouchers/AddVoucher'
 import { ViewCoupons } from './admin/coupons/ViewCoupons'
 import { AddCoupon } from './admin/coupons/AddCoupon'
 import { ViewItems } from './admin/items/ViewItems'
+import { AddItem } from './admin/items/AddItem'
 import { ViewPayments } from './admin/payments/ViewPayments'
+import { AddPayment } from './admin/payments/AddPayment'
 import { ViewBookings } from './admin/bookings/ViewBookings'
 import { UserOrders } from './admin/orders/UserOrders'
 import { Reports } from './admin/reports/Reports'
@@ -100,7 +102,9 @@ export default function App() {
           <Route path="coupons" element={<ViewCoupons />} />
           <Route path="coupons/add" element={<AddCoupon />} />
           <Route path="items" element={<ViewItems />} />
+          <Route path="items/add" element={<AddItem />} />
           <Route path="payments" element={<ViewPayments />} />
+          <Route path="payments/add" element={<AddPayment />} />
           <Route path="bookings" element={<ViewBookings />} />
           <Route path="orders" element={<UserOrders />} />
           <Route path="reports" element={<Reports />} />

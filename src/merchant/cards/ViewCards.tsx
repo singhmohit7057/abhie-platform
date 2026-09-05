@@ -126,7 +126,7 @@ export function MerchantViewCards() {
         </div>
       </div>
 
-      <p className="mb-2 text-sm text-gray-500">Cards assigned to you by admin. Issue them to your clients.</p>
+      <p className="mb-2 text-sm text-gray-900">Cards assigned to you by admin. Issue them to your clients.</p>
       <DataTable columns={columns} data={filtered} loading={loading} searchable={false} />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Issue Card to Client">

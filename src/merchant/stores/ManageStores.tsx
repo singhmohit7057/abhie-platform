@@ -22,7 +22,7 @@ export function ManageStores() {
       key: 'actions', label: 'Actions',
       render: (s: Store) => (
         <div className="flex gap-2">
-          <Link to={`/merchant/stores/add?edit=${s.id}`} className="text-blue-600 hover:text-blue-800"><Pencil size={16} /></Link>
+          <Link to={`/merchant/stores/add?edit=${s.id}`} className="text-gray-900 hover:text-gray-700"><Pencil size={16} /></Link>
           <button onClick={() => remove(s.id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
         </div>
       ),
