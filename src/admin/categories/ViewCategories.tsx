@@ -9,10 +9,14 @@ import type { Category } from '../../types'
 export function ViewCategories() {
   const { data, loading, remove } = useCRUD<Category>({ table: 'categories' })
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
-  const filtered = search
-    ? data.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-    : data
+  const filtered = data.filter(c => {
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (statusFilter === 'active' && !c.is_active) return false
+    if (statusFilter === 'inactive' && c.is_active) return false
+    return true
+  })
 
   const columns = [
     { key: 'sl', label: 'Sl. No.', render: (_c: Category, index: number) => index + 1 },
@@ -35,14 +39,23 @@ export function ViewCategories() {
         <Link to="/admin/categories/add"><Button><Plus size={16} /> Add New</Button></Link>
       </div>
 
-      <div className="mb-4 flex items-center justify-end gap-3">
+      <div className="mb-4 flex flex-wrap items-end gap-3 justify-end">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by Title"
-          className="rounded border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
+          className="rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
         />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+        >
+          <option value="">-- All Status --</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
         <Button variant="secondary" onClick={() => {}}>Search</Button>
       </div>
 

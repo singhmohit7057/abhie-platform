@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useCRUD } from '../../hooks/useCRUD'
+import { supabase } from '../../lib/supabase'
 import { Button } from '../../components/ui/Button'
 import { generateSlug } from '../../lib/utils'
 import type { Category } from '../../types'
 
 export function AddCategory() {
-  const { data: categories, create, update } = useCRUD<Category>({ table: 'categories' })
+  const { data: categories, update } = useCRUD<Category>({ table: 'categories' })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
+  const [error, setError] = useState('')
 
   const [form, setForm] = useState({
     name: '', description: '', is_active: 'true',
@@ -26,6 +28,7 @@ export function AddCategory() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     const payload = {
       name: form.name,
       slug: generateSlug(form.name),
@@ -34,10 +37,19 @@ export function AddCategory() {
     }
     if (editId) {
       await update(editId, payload)
+      navigate('/admin/categories')
     } else {
-      await create(payload as any)
+      const { error: createError } = await supabase.from('categories').insert(payload as any)
+      if (createError) {
+        if (createError.message.includes('unique') || createError.message.includes('duplicate')) {
+          setError('Category with this title already exists!')
+        } else {
+          setError(createError.message)
+        }
+        return
+      }
+      navigate('/admin/categories')
     }
-    navigate('/admin/categories')
   }
 
   return (
@@ -68,6 +80,7 @@ export function AddCategory() {
             </tbody>
           </table>
 
+          {error && <p className="mt-3 text-center text-sm font-bold text-red-600">{error}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">{editId ? 'Update' : 'Save'}</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/admin/categories')}>Cancel</Button>

@@ -70,7 +70,7 @@ export function AdminLayout() {
           </span>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-sm text-gray-900 hover:text-gray-700"
+            className="flex cursor-pointer items-center gap-1.5 text-sm text-gray-900 hover:text-gray-700"
           >
             <LogOut size={16} />
             LogOut

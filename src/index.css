@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Override focus border color globally for admin/merchant forms */
+input:focus, textarea:focus, select:focus {
+  border-color: #1a1a1a !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @theme {
   --color-brand-50: #fef2f2;
   --color-brand-100: #fde3e3;
