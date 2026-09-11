@@ -13,7 +13,7 @@ import type { Item, Category } from '../../types'
 
 export function MerchantViewItems() {
   const merchantId = useMerchantId()
-  const { data, loading, create, update, remove } = useCRUD<Item>({ table: 'items', filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data, loading, create, update, remove } = useCRUD<Item>({ table: 'items', filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
   const { data: categories } = useCRUD<Category>({ table: 'categories' })
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Item | null>(null)

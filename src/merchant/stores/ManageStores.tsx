@@ -9,7 +9,7 @@ import type { Store } from '../../types'
 
 export function ManageStores() {
   const merchantId = useMerchantId()
-  const { data, loading, remove } = useCRUD<Store>({ table: 'stores', filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data, loading, remove } = useCRUD<Store>({ table: 'stores', filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
 
   const columns = [
     { key: 'sl', label: 'Sl. No.', render: (_s: Store, index: number) => index + 1 },

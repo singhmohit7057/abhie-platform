@@ -116,15 +116,34 @@ export function DataTable<T extends { id: string }>({
           >
             &lt;&lt; Prev
           </button>
-          {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i)}
-              className={`rounded border px-2 py-1 text-xs ${page === i ? 'border-red-500 bg-red-50 font-bold' : 'border-gray-300 hover:bg-gray-100'}`}
-            >
-              {i + 1}
-            </button>
-          ))}
+          {(() => {
+            const total = Math.max(totalPages, 1)
+            const getPages = () => {
+              if (total <= 7) return Array.from({ length: total }, (_, i) => i)
+              const pages: (number | '...')[] = []
+              pages.push(0, 1, 2)
+              if (page > 4) pages.push('...')
+              for (let i = Math.max(3, page - 1); i <= Math.min(total - 4, page + 1); i++) {
+                if (!pages.includes(i)) pages.push(i)
+              }
+              if (page < total - 5) pages.push('...')
+              pages.push(total - 3, total - 2, total - 1)
+              return [...new Set(pages)].filter(p => typeof p === 'number' ? p >= 0 && p < total : true)
+            }
+            return getPages().map((p, idx) =>
+              p === '...' ? (
+                <span key={`dots-${idx}`} className="px-1 text-xs text-gray-900">...</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p as number)}
+                  className={`rounded border px-2 py-1 text-xs ${page === p ? 'border-red-500 bg-red-50 font-bold' : 'border-gray-300 hover:bg-gray-100'}`}
+                >
+                  {(p as number) + 1}
+                </button>
+              )
+            )
+          })()}
           <button
             onClick={() => setPage(page + 1)}
             disabled={page >= totalPages - 1}

@@ -11,7 +11,7 @@ import type { Redemption, Card, Client } from '../../types'
 
 export function ManageRedemption() {
   const merchantId = useMerchantId()
-  const { data, loading, create } = useCRUD<Redemption>({ table: 'redemptions', filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data, loading, create } = useCRUD<Redemption>({ table: 'redemptions', filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
   const { data: cards } = useCRUD<Card>({ table: 'cards' })
   const { data: clients } = useCRUD<Client>({ table: 'clients' })
   const [modalOpen, setModalOpen] = useState(false)

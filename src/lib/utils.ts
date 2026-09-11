@@ -34,6 +34,6 @@ export function generateCardNumber(type: 'offline' | 'online') {
   const dateStr = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`
   const typeCode = type === 'offline' ? '1' : '2'
   const counter = onlineCounter++
-  const suffix = String(counter).padStart(5, '0')
-  return `ABHIE${typeCode}0${dateStr}${suffix}`
+  const suffix = String(counter).padStart(4, '0')
+  return `ABHIE${typeCode}${dateStr}${suffix}`
 }

@@ -1,26 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import { useCRUD } from '../../hooks/useCRUD'
 import { DataTable } from '../../components/shared/DataTable'
 import { Button } from '../../components/ui/Button'
-import type { Merchant, Card, Store, Profile } from '../../types'
+import type { Merchant, Store, Profile } from '../../types'
 
 export function ViewMerchants() {
   const { data, loading } = useCRUD<Merchant>({ table: 'merchants' })
-  const { data: cards } = useCRUD<Card>({ table: 'cards' })
   const { data: stores } = useCRUD<Store>({ table: 'stores' })
   const { data: profiles } = useCRUD<Profile>({ table: 'profiles' })
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [cardStats, setCardStats] = useState<Record<string, { total: number; start: string; end: string }>>({})
+
+  useEffect(() => {
+    if (data.length === 0) return
+    const fetchCardStats = async () => {
+      const { supabase } = await import('../../lib/supabase')
+      const stats: Record<string, { total: number; start: string; end: string }> = {}
+      for (const merchant of data) {
+        const { data: merchantCards } = await supabase
+          .from('cards')
+          .select('card_number')
+          .eq('merchant_id', merchant.id)
+          .order('card_number', { ascending: true })
+        if (merchantCards && merchantCards.length > 0) {
+          stats[merchant.id] = {
+            total: merchantCards.length,
+            start: merchantCards[0].card_number,
+            end: merchantCards[merchantCards.length - 1].card_number,
+          }
+        } else {
+          stats[merchant.id] = { total: 0, start: '', end: '' }
+        }
+      }
+      setCardStats(stats)
+    }
+    fetchCardStats()
+  }, [data])
 
   const getCardInfo = (merchantId: string) => {
-    const merchantCards = cards.filter(c => c.merchant_id === merchantId)
-    const total = merchantCards.length
-    const start = merchantCards.length > 0 ? merchantCards[0].card_number : ''
-    const end = merchantCards.length > 1 ? merchantCards[merchantCards.length - 1].card_number : ''
-    return { total, start, end }
+    return cardStats[merchantId] || { total: 0, start: '', end: '' }
   }
 
   const filtered = data.filter(m => {

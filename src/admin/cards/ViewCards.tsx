@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button'
 import type { Card, Merchant, Client } from '../../types'
 
 export function ViewCards() {
-  const { data, loading, remove } = useCRUD<Card>({ table: 'cards' })
+  const { data, loading, remove } = useCRUD<Card>({ table: 'cards', orderBy: 'card_number', ascending: false })
   const { data: merchants } = useCRUD<Merchant>({ table: 'merchants' })
   const { data: clients } = useCRUD<Client>({ table: 'clients' })
   const [search, setSearch] = useState('')

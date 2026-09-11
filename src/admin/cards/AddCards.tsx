@@ -5,13 +5,9 @@ import { Button } from '../../components/ui/Button'
 import type { Card, Merchant } from '../../types'
 
 export function AddCards() {
-  const { data: allCards, create } = useCRUD<Card>({ table: 'cards' })
+  const { data: allCards } = useCRUD<Card>({ table: 'cards' })
   const { data: merchants } = useCRUD<Merchant>({ table: 'merchants' })
   const navigate = useNavigate()
-
-  const today = new Date()
-  const dateStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`
-  const offlinePrefix = `ABHIE10${dateStr}`
 
   const offlineCards = useMemo(() => allCards.filter((c) => c.card_number.startsWith('ABHIE1')), [allCards])
 
@@ -21,18 +17,31 @@ export function AddCards() {
     return sorted[0].card_number
   }, [offlineCards])
 
+  // Extract prefix from last card (everything except last 4 digits)
+  const offlinePrefix = useMemo(() => {
+    if (offlineCards.length === 0) return 'ABHIE108020250108'
+    const sorted = [...offlineCards].sort((a, b) => a.card_number > b.card_number ? -1 : 1)
+    return sorted[0].card_number.slice(0, -4)
+  }, [offlineCards])
+
   const nextFrom = useMemo(() => {
     if (offlineCards.length === 0) return '1'
     const sorted = [...offlineCards].sort((a, b) => a.card_number > b.card_number ? -1 : 1)
     const lastCard = sorted[0].card_number as string
-    const lastDigits = parseInt(lastCard.slice(-5))
+    const lastDigits = parseInt(lastCard.slice(-4))
     return String(lastDigits + 1)
   }, [offlineCards])
 
+  const [prefix, setPrefix] = useState('')
   const [form, setForm] = useState({
     type: '', from: '1', to: '', merchant_id: '',
   })
   const [formError, setFormError] = useState('')
+  const [formSuccess, setFormSuccess] = useState('')
+
+  useEffect(() => {
+    setPrefix(offlinePrefix)
+  }, [offlinePrefix])
 
   useEffect(() => {
     setForm(f => ({ ...f, from: nextFrom }))
@@ -45,19 +54,21 @@ export function AddCards() {
     return toNum - fromNum + 1
   })()
 
-  const previewCard = form.from ? `${offlinePrefix}${String(parseInt(form.from)).padStart(5, '0')}` : ''
+  const previewCard = form.from ? `${prefix}${String(parseInt(form.from)).padStart(4, '0')}` : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    setFormSuccess('')
     const fromNum = parseInt(form.from)
     const toNum = parseInt(form.to)
     if (isNaN(fromNum) || isNaN(toNum) || toNum < fromNum) return
 
+    const { supabase } = await import('../../lib/supabase')
+    const cards = []
     for (let i = fromNum; i <= toNum; i++) {
-      const cardNumber = `${offlinePrefix}${String(i).padStart(5, '0')}`
-      await create({
-        card_number: cardNumber,
+      cards.push({
+        card_number: `${prefix}${String(i).padStart(4, '0')}`,
         merchant_id: form.merchant_id || null,
         card_type: form.type || 'Membership Card',
         balance: 0,
@@ -66,9 +77,17 @@ export function AddCards() {
         valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         is_active: true,
         client_id: null,
-      } as any)
+      })
     }
-    navigate('/admin/cards')
+
+    const merchantName = merchants.find(m => m.id === form.merchant_id)?.store_name || 'Unassigned'
+    let inserted = 0
+    for (let i = 0; i < cards.length; i += 100) {
+      const { error } = await supabase.from('cards').insert(cards.slice(i, i + 100))
+      if (error) { setFormError(error.message); return }
+      inserted += Math.min(100, cards.length - i)
+    }
+    setFormSuccess(`${inserted} cards (${prefix}${String(fromNum).padStart(4, '0')} to ${prefix}${String(toNum).padStart(4, '0')}) assigned to ${merchantName}`)
   }
 
   return (
@@ -80,9 +99,9 @@ export function AddCards() {
       </div>
 
       <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-        <strong>Card Format:</strong> ABHIE + [1=Offline, 2=Online] + 0 + [ddmmyyyy] + [5-digit sequence]
-        <br />
-        <span className="text-xs text-gray-900">Example: {offlinePrefix}00001</span>
+        <strong>Card Format:</strong> ABHIE + [10=Offline / 20=Online] + [Series Code (8020250108)] + [4-digit sequence]
+        &nbsp;&nbsp;<span className="text-gray-900">|</span>&nbsp;&nbsp;
+        <span className="text-gray-900">Current Series: <strong>{prefix}</strong></span>
       </div>
 
       <div className="rounded-lg border bg-white p-6">
@@ -92,7 +111,7 @@ export function AddCards() {
               <tr className="border-b border-gray-100">
                 <td className="py-3 pr-4 font-medium text-gray-700 whitespace-nowrap">Card Prefix (auto):</td>
                 <td className="py-3">
-                  <input className="w-full rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm" value={offlinePrefix} disabled />
+                  <input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none" value={prefix} onChange={(e) => setPrefix(e.target.value.toUpperCase())} placeholder="e.g. ABHIE108020250108" />
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
@@ -121,9 +140,9 @@ export function AddCards() {
                 <tr className="border-b border-gray-100">
                   <td className="py-3 pr-4 font-medium text-gray-700 whitespace-nowrap">Preview:</td>
                   <td className="py-3 text-xs text-gray-600">
-                    First: <strong>{offlinePrefix}{String(parseInt(form.from)).padStart(5, '0')}</strong>
+                    First: <strong>{prefix}{String(parseInt(form.from)).padStart(4, '0')}</strong>
                     <br />
-                    Last: <strong>{offlinePrefix}{String(parseInt(form.to)).padStart(5, '0')}</strong>
+                    Last: <strong>{prefix}{String(parseInt(form.to)).padStart(4, '0')}</strong>
                   </td>
                 </tr>
               )}
@@ -140,6 +159,7 @@ export function AddCards() {
           </table>
 
           {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
+          {formSuccess && <div className="mt-3 rounded border border-green-200 bg-green-50 px-4 py-3 text-center text-sm font-bold text-green-700">{formSuccess}</div>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Submit</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/admin/cards')}>Cancel</Button>

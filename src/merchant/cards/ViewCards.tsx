@@ -12,7 +12,7 @@ type StatusFilter = '' | 'available' | 'issued'
 
 export function MerchantViewCards() {
   const merchantId = useMerchantId()
-  const { data, loading, update } = useCRUD<Card>({ table: 'cards', orderBy: 'card_number', ascending: true, filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data, loading, update } = useCRUD<Card>({ table: 'cards', orderBy: 'card_number', ascending: true, filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
   const { data: clients } = useCRUD<Client>({ table: 'clients' })
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)

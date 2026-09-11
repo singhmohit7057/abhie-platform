@@ -8,7 +8,7 @@ import type { Payment, Store, Item } from '../../types'
 export function AddBilling() {
   const { create } = useCRUD<Payment>({ table: 'payments' })
   const merchantId = useMerchantId()
-  const { data: stores } = useCRUD<Store>({ table: 'stores', filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data: stores } = useCRUD<Store>({ table: 'stores', filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
   const { data: items } = useCRUD<Item>({ table: 'items' })
   const navigate = useNavigate()
 

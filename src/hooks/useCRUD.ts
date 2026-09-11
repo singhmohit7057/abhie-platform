@@ -7,6 +7,7 @@ interface UseCRUDOptions {
   orderBy?: string
   ascending?: boolean
   filters?: Record<string, unknown>
+  skip?: boolean
 }
 
 export function useCRUD<T extends { id: string }>({
@@ -14,11 +15,13 @@ export function useCRUD<T extends { id: string }>({
   orderBy = 'created_at',
   ascending = false,
   filters,
+  skip = false,
 }: UseCRUDOptions) {
   const [data, setData] = useState<T[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!skip)
 
   const fetchData = useCallback(async () => {
+    if (skip) { setData([]); setLoading(false); return }
     setLoading(true)
 
     let query = supabase.from(table).select('*').order(orderBy, { ascending })

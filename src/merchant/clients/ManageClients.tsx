@@ -8,7 +8,7 @@ import type { Client, Card } from '../../types'
 
 export function ManageClients() {
   const merchantId = useMerchantId()
-  const { data, loading, remove } = useCRUD<Client>({ table: 'clients', filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data, loading, remove } = useCRUD<Client>({ table: 'clients', filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
   const { data: cards } = useCRUD<Card>({ table: 'cards' })
 
   const getCardNumber = (client: any) => {

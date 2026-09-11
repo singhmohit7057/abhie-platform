@@ -13,7 +13,7 @@ import type { Payment } from '../../types'
 
 export function ManageBilling() {
   const merchantId = useMerchantId()
-  const { data, loading, create } = useCRUD<Payment>({ table: 'payments', filters: merchantId ? { merchant_id: merchantId } : undefined })
+  const { data, loading, create } = useCRUD<Payment>({ table: 'payments', filters: merchantId ? { merchant_id: merchantId } : undefined, skip: !merchantId })
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ amount: '0', payment_mode: 'upi' as const, status: 'completed' as const, transaction_id: '' })
 
