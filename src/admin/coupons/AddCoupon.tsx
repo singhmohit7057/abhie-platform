@@ -17,6 +17,7 @@ export function AddCoupon() {
     code: '', generate_type: 'discount', discount_value: '',
     description: '', repeat: 'one_time', valid_until: '', is_active: 'true', members_only: 'no',
   })
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (editId && coupons.length > 0) {
@@ -35,6 +36,7 @@ export function AddCoupon() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const payload = {
       code: form.code,
       title: form.code,
@@ -176,6 +178,7 @@ export function AddCoupon() {
             </tbody>
           </table>
 
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Submit</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/admin/coupons')}>Cancel</Button>

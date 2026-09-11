@@ -16,6 +16,7 @@ export function AddBilling() {
     search_by: 'card', store_id: '', bill_amount: '', disc_type: 'fixed', disc_value: '',
     voucher_code: '', coupon_code: '', tax_percent: '0', redeem_points: '', remarks: '',
   })
+  const [formError, setFormError] = useState('')
 
   const selectedStore = stores.find(s => s.id === form.store_id)
   const billAmount = parseFloat(form.bill_amount || '0')
@@ -28,6 +29,7 @@ export function AddBilling() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const payload = {
       amount: payableAmount,
       payment_mode: 'cash' as const,
@@ -173,6 +175,7 @@ export function AddBilling() {
             </tbody>
           </table>
 
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Save</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/merchant/billing')}>Cancel</Button>

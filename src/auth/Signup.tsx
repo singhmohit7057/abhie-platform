@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import toast from 'react-hot-toast'
 
 export function Signup() {
   const [searchParams] = useSearchParams()
@@ -12,19 +11,26 @@ export function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [referralCode, setReferralCode] = useState(searchParams.get('ref') || '')
   const [loading, setLoading] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [formSuccess, setFormSuccess] = useState('')
   const navigate = useNavigate()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
+    setFormSuccess('')
 
     if (!name || !email || !password) {
-      return toast.error('Please fill all required fields')
+      setFormError('Please fill all required fields')
+      return
     }
     if (password.length < 6) {
-      return toast.error('Password must be at least 6 characters')
+      setFormError('Password must be at least 6 characters')
+      return
     }
     if (password !== confirmPassword) {
-      return toast.error('Passwords do not match')
+      setFormError('Passwords do not match')
+      return
     }
 
     setLoading(true)
@@ -41,9 +47,9 @@ export function Signup() {
     })
 
     if (error) {
-      toast.error(error.message)
+      setFormError(error.message)
     } else {
-      toast.success('Account created! Please check your email to verify.')
+      setFormSuccess('Account created! Please check your email to verify.')
       navigate('/login')
     }
     setLoading(false)
@@ -131,6 +137,8 @@ export function Signup() {
               <p className="mt-1 text-xs text-brand-600">You'll get ₹100 off on your first order!</p>
             )}
           </div>
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
+          {formSuccess && <p className="mt-3 text-center text-sm font-bold text-green-600">{formSuccess}</p>}
           <button
             type="submit"
             disabled={loading}

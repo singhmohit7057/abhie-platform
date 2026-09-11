@@ -15,6 +15,7 @@ export function AddStore() {
   const [form, setForm] = useState({
     name: '', address: '', city: '', state: '', pincode: '', phone: '', is_active: 'true',
   })
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (editId && stores.length > 0) {
@@ -31,6 +32,7 @@ export function AddStore() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const payload = {
       name: form.name,
       address: form.address || null,
@@ -128,6 +130,7 @@ export function AddStore() {
             </tbody>
           </table>
 
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Save</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/merchant/stores')}>Cancel</Button>

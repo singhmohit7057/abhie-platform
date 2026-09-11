@@ -7,7 +7,7 @@ import { generateSlug } from '../../lib/utils'
 import type { Category } from '../../types'
 
 export function AddCategory() {
-  const { data: categories, update } = useCRUD<Category>({ table: 'categories' })
+  const { data: categories } = useCRUD<Category>({ table: 'categories' })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
@@ -36,7 +36,15 @@ export function AddCategory() {
       is_active: form.is_active === 'true',
     }
     if (editId) {
-      await update(editId, payload)
+      const { error: updateError } = await supabase.from('categories').update(payload).eq('id', editId)
+      if (updateError) {
+        if (updateError.message.includes('unique') || updateError.message.includes('duplicate')) {
+          setError('Category with this title already exists!')
+        } else {
+          setError(updateError.message)
+        }
+        return
+      }
       navigate('/admin/categories')
     } else {
       const { error: createError } = await supabase.from('categories').insert(payload as any)

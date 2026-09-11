@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'
 import { useCRUD } from '../../hooks/useCRUD'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
-import toast from 'react-hot-toast'
 import type { Merchant, Category, Profile } from '../../types'
 
 export function AddMerchant() {
-  const { data: merchantsData, create, update } = useCRUD<Merchant>({ table: 'merchants' })
+  const { data: merchantsData, update } = useCRUD<Merchant>({ table: 'merchants' })
   const { data: categories } = useCRUD<Category>({ table: 'categories' })
   const { data: profiles } = useCRUD<Profile>({ table: 'profiles' })
   const navigate = useNavigate()
@@ -33,6 +33,7 @@ export function AddMerchant() {
 
   const [form, setForm] = useState(getEditData())
   const [showPassword, setShowPassword] = useState(false)
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (editId && merchantsData.length > 0) {
@@ -53,6 +54,7 @@ export function AddMerchant() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
 
     if (!editId && form.email && form.password) {
       const freshClient = createClient(
@@ -68,7 +70,7 @@ export function AddMerchant() {
         },
       })
       if (authError) {
-        toast.error(`Failed to create account: ${authError.message}`)
+        setFormError(authError.message.includes('already registered') ? 'This email is already registered.' : `Failed to create account: ${authError.message}`)
         return
       }
       if (authData.user) {
@@ -93,7 +95,15 @@ export function AddMerchant() {
       await update(editId, payload)
     } else {
       payload.user_id = form.user_id || null
-      await create(payload as any)
+      const { error: merchantError } = await supabase.from('merchants').insert(payload)
+      if (merchantError) {
+        if (merchantError.message.includes('foreign key')) {
+          setFormError('Please fill Email and Password to create a merchant account first.')
+        } else {
+          setFormError(merchantError.message)
+        }
+        return
+      }
     }
     navigate('/admin/merchants')
   }
@@ -193,33 +203,15 @@ export function AddMerchant() {
                 <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap align-top">Category:</td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Category:</td>
                 <td className="py-2">
-                  <div className="flex flex-wrap gap-3">
-                    <label className="flex items-center gap-1.5 text-sm">
-                      <input type="checkbox" checked={form.business_type === 'All'} onChange={() => setForm({ ...form, business_type: form.business_type === 'All' ? '' : 'All' })} className="rounded border-gray-300" />
-                      All
-                    </label>
-                    {categories.map(c => (
-                      <label key={c.id} className="flex items-center gap-1.5 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={form.business_type === 'All' || form.business_type.split(',').includes(c.name)}
-                          disabled={form.business_type === 'All'}
-                          onChange={(e) => {
-                            const current = form.business_type ? form.business_type.split(',').filter(x => x && x !== 'All') : []
-                            if (e.target.checked) {
-                              setForm({ ...form, business_type: [...current, c.name].join(',') })
-                            } else {
-                              setForm({ ...form, business_type: current.filter(x => x !== c.name).join(',') })
-                            }
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                        {c.name}
-                      </label>
+                  <select className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none" value={form.business_type} onChange={(e) => setForm({ ...form, business_type: e.target.value })}>
+                    <option value="">--- Select ---</option>
+                    <option value="All">All Categories</option>
+                    {categories.filter(c => c.is_active).map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
                     ))}
-                  </div>
+                  </select>
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
@@ -234,6 +226,7 @@ export function AddMerchant() {
             </tbody>
           </table>
 
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Save</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/admin/merchants')}>Cancel</Button>

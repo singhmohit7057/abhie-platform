@@ -21,6 +21,7 @@ export function AddClient() {
     address: '', city: '', state: '', pincode: '', card_id: '',
     agency: '', sales_manager: '', remarks: '', is_active: 'true', membership: 'no',
   })
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (editId && clients.length > 0) {
@@ -42,6 +43,7 @@ export function AddClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const payload = {
       name: form.name,
       phone: form.phone,
@@ -225,6 +227,7 @@ export function AddClient() {
             </tbody>
           </table>
 
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Save</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/merchant/clients')}>Cancel</Button>

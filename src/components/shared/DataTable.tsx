@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 
 interface Column<T> {
@@ -26,6 +26,8 @@ export function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
+
+  useEffect(() => { setPage(0) }, [data])
 
   const filtered = data.filter((item) =>
     search

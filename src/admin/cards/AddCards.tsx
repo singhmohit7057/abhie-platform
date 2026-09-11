@@ -32,6 +32,7 @@ export function AddCards() {
   const [form, setForm] = useState({
     type: '', from: '1', to: '', merchant_id: '',
   })
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     setForm(f => ({ ...f, from: nextFrom }))
@@ -48,6 +49,7 @@ export function AddCards() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const fromNum = parseInt(form.from)
     const toNum = parseInt(form.to)
     if (isNaN(fromNum) || isNaN(toNum) || toNum < fromNum) return
@@ -137,6 +139,7 @@ export function AddCards() {
             </tbody>
           </table>
 
+          {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
             <Button type="submit">Submit</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/admin/cards')}>Cancel</Button>

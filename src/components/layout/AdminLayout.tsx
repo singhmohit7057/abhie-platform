@@ -61,7 +61,7 @@ export function AdminLayout() {
       {/* Top Bar */}
       <header className="flex items-center justify-between bg-white px-6 py-2 shadow-sm">
         <div className="flex items-center gap-3">
-          <img src="/abhilogo.webp" alt="Abhi-E" className="h-7 object-contain" />
+            <img src="/abhilogo.webp" alt="Abhi-E" className="h-7 object-contain" />
           <span className="text-sm text-gray-600">Welcome <strong>Abhi-E</strong></span>
         </div>
         <div className="flex items-center gap-4">
@@ -79,11 +79,16 @@ export function AdminLayout() {
       </header>
 
       {/* Title Banner */}
-      <Link to="/admin" className="block bg-[#bf282d] py-2.5 text-center hover:bg-[#a32028] transition">
-        <h1 className="text-base font-semibold text-white">
-          Abhi-E (Administrator Panel)
-        </h1>
-      </Link>
+      <div className="relative bg-[#bf282d] py-2.5">
+        <Link to="/admin" className="block text-center hover:opacity-90 transition">
+          <h1 className="text-base font-semibold text-white">Abhi-E (Administrator Panel)</h1>
+        </Link>
+        {!isDashboard && (
+          <button onClick={() => navigate(-1)} className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-white opacity-70 hover:opacity-100 cursor-pointer">
+            ← Back
+          </button>
+        )}
+      </div>
 
       {/* Content with Sidebar */}
       <div className={`flex flex-1 ${isDashboard ? '' : 'px-6 py-6'}`}>
