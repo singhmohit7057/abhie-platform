@@ -52,13 +52,13 @@ export function ViewCategories() {
         </div>
       )}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-red-700">Manage Categories</h1>
+        <h1 className="text-xl font-medium text-gray-900">Manage Categories</h1>
         <Link to="/admin/categories/add"><Button><Plus size={16} /> Add New</Button></Link>
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3 justify-center">
         <div>
-          <label className="mb-1 block text-xs text-gray-900">Search:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Search:</label>
           <input
           type="text"
           value={search}
@@ -68,7 +68,7 @@ export function ViewCategories() {
         />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-900">Status:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Status:</label>
           <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -90,7 +90,7 @@ export function ViewCategories() {
             <p className="mb-6 text-sm text-gray-900">Are you sure want to delete this category?</p>
             <div className="flex justify-center gap-3">
               <button onClick={() => handleDelete(deleteConfirm)} className="rounded bg-red-600 px-5 py-2 text-sm font-medium text-white hover:bg-red-800">Yes, Delete</button>
-              <button onClick={() => setDeleteConfirm(null)} className="rounded border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100">Cancel</button>
+              <button onClick={() => setDeleteConfirm(null)} className="rounded border border-gray-300 bg-white px-5 py-2 text-xs font-medium text-gray-900 hover:bg-gray-100">Cancel</button>
             </div>
           </div>
         </div>

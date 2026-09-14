@@ -95,11 +95,11 @@ export function MerchantViewCards() {
       <div className="mb-4 rounded-lg border bg-white p-4">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Search:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Search:</label>
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by card number or name" className="w-64 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Status:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Status:</label>
             <select className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
               <option value="">-- All --</option>
               <option value="available">Available</option>
@@ -107,7 +107,7 @@ export function MerchantViewCards() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Membership Status:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Membership Status:</label>
             <select className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={membershipFilter} onChange={(e) => setMembershipFilter(e.target.value)}>
               <option value="">-- All --</option>
               <option value="yes">Yes</option>
@@ -115,7 +115,7 @@ export function MerchantViewCards() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Client Status:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Client Status:</label>
             <select className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={clientStatusFilter} onChange={(e) => setClientStatusFilter(e.target.value)}>
               <option value="">-- All --</option>
               <option value="active">Active</option>

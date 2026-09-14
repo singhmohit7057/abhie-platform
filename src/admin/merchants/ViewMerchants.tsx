@@ -102,7 +102,7 @@ export function ViewMerchants() {
 
       <div className="mb-4 flex flex-wrap items-end justify-center gap-4">
         <div>
-          <label className="mb-1 block text-xs text-gray-600">Search:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Search:</label>
           <input
             type="text"
             value={search}
@@ -112,7 +112,7 @@ export function ViewMerchants() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-600">Category:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Category:</label>
           <input
             type="text"
             value={categoryFilter}
@@ -122,7 +122,7 @@ export function ViewMerchants() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-600">Status:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Status:</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

@@ -92,19 +92,19 @@ export function ViewCards() {
       <div className="mb-4 rounded-lg border bg-white p-4">
         <div className="mb-3 flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-xs text-gray-600">From Date:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">From Date:</label>
             <input placeholder="dd-mm-yyyy" maxLength={10} value={fromDate} onChange={(e) => { let v = e.target.value.replace(/[^0-9]/g, ''); if (v.length > 2) v = v.slice(0,2) + '-' + v.slice(2); if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5); setFromDate(v.slice(0,10)); }} className={`w-32 rounded border px-2 py-1.5 text-sm focus:outline-none ${fromDate.length === 10 && (() => { const [d,m] = fromDate.split('-').map(Number); return d > 31 || d < 1 || m > 12 || m < 1; })() ? 'border-red-500' : 'border-gray-300 focus:border-red-500'}`} />
             {fromDate.length === 10 && (() => { const [d,m] = fromDate.split('-').map(Number); return d > 31 || d < 1 || m > 12 || m < 1; })() && <p className="mt-0.5 text-xs text-red-600">Invalid date</p>}
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-600">To Date:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">To Date:</label>
             <input placeholder="dd-mm-yyyy" maxLength={10} value={toDate} onChange={(e) => { let v = e.target.value.replace(/[^0-9]/g, ''); if (v.length > 2) v = v.slice(0,2) + '-' + v.slice(2); if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5); setToDate(v.slice(0,10)); }} className={`w-32 rounded border px-2 py-1.5 text-sm focus:outline-none ${toDate.length === 10 && (() => { const [d,m] = toDate.split('-').map(Number); return d > 31 || d < 1 || m > 12 || m < 1; })() ? 'border-red-500' : 'border-gray-300 focus:border-red-500'}`} />
             {toDate.length === 10 && (() => { const [d,m] = toDate.split('-').map(Number); return d > 31 || d < 1 || m > 12 || m < 1; })() && <p className="mt-0.5 text-xs text-red-600">Invalid date</p>}
           </div>
         </div>
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Search:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Search:</label>
             <input
               type="text"
               value={search}
@@ -114,7 +114,7 @@ export function ViewCards() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Merchant Name:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Merchant Name:</label>
             <input
               type="text"
               value={merchantSearch}
@@ -124,7 +124,7 @@ export function ViewCards() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-600">Status:</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Status:</label>
             <select className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">-- All --</option>
               <option value="active">Active</option>

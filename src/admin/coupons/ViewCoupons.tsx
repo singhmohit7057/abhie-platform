@@ -60,7 +60,7 @@ export function ViewCoupons() {
 
       <div className="mb-4 flex flex-wrap items-end gap-4 rounded-lg border bg-white p-4">
         <div>
-          <label className="mb-1 block text-xs text-gray-600">Membership Status:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Membership Status:</label>
           <select className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={membershipFilter} onChange={(e) => setMembershipFilter(e.target.value)}>
             <option value="">All</option>
             <option value="yes">Yes</option>
@@ -68,7 +68,7 @@ export function ViewCoupons() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-600">Coupon Status:</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Coupon Status:</label>
           <select className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All</option>
             <option value="active">Active</option>

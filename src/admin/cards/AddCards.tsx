@@ -139,7 +139,7 @@ export function AddCards() {
               {previewCard && form.to && (
                 <tr className="border-b border-gray-100">
                   <td className="py-3 pr-4 font-medium text-gray-700 whitespace-nowrap">Preview:</td>
-                  <td className="py-3 text-xs text-gray-600">
+                  <td className="py-3 text-xs font-medium text-gray-900">
                     First: <strong>{prefix}{String(parseInt(form.from)).padStart(4, '0')}</strong>
                     <br />
                     Last: <strong>{prefix}{String(parseInt(form.to)).padStart(4, '0')}</strong>
