@@ -47,7 +47,7 @@ export function ViewMerchants() {
 
   const filtered = data.filter(m => {
     if (search && !m.store_name.toLowerCase().includes(search.toLowerCase())) return false
-    if (categoryFilter && m.business_type !== categoryFilter) return false
+    if (categoryFilter && !m.business_type?.toLowerCase().includes(categoryFilter.toLowerCase())) return false
     if (statusFilter === 'true' && !m.is_active) return false
     if (statusFilter === 'false' && m.is_active) return false
     return true
@@ -118,7 +118,7 @@ export function ViewMerchants() {
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             placeholder="All Categories"
-            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none"
+            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
           />
         </div>
         <div>
@@ -133,7 +133,6 @@ export function ViewMerchants() {
             <option value="false">Inactive</option>
           </select>
         </div>
-        <Button variant="secondary" onClick={() => {}}>Search</Button>
       </div>
 
       <DataTable columns={columns} data={filtered} loading={loading} searchable={false} />

@@ -56,23 +56,29 @@ export function ViewCategories() {
         <Link to="/admin/categories/add"><Button><Plus size={16} /> Add New</Button></Link>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-end gap-3 justify-end">
-        <input
+      <div className="mb-4 flex flex-wrap items-end gap-3 justify-center">
+        <div>
+          <label className="mb-1 block text-xs text-gray-900">Search:</label>
+          <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by Title"
           className="rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
         />
-        <select
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-gray-900">Status:</label>
+          <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
         >
-          <option value="">ALL</option>
+          <option value="">— All —</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+        </div>
       </div>
 
       <DataTable columns={columns} data={filtered} loading={loading} searchable={false} />
