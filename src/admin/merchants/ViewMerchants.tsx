@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import { useCRUD } from '../../hooks/useCRUD'
 import { DataTable } from '../../components/shared/DataTable'
@@ -10,10 +10,20 @@ export function ViewMerchants() {
   const { data, loading } = useCRUD<Merchant>({ table: 'merchants' })
   const { data: stores } = useCRUD<Store>({ table: 'stores' })
   const { data: profiles } = useCRUD<Profile>({ table: 'profiles' })
+  const location = useLocation()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [cardStats, setCardStats] = useState<Record<string, { total: number; start: string; end: string }>>({})
+  const [successMsg, setSuccessMsg] = useState((location.state as any)?.success || '')
+
+  useEffect(() => {
+    if (successMsg) {
+      window.history.replaceState({}, '')
+      const t = setTimeout(() => setSuccessMsg(''), 4000)
+      return () => clearTimeout(t)
+    }
+  }, [])
 
   useEffect(() => {
     if (data.length === 0) return
@@ -82,10 +92,6 @@ export function ViewMerchants() {
       render: (m: Merchant) => <Link to={`/admin/merchants/add?edit=${m.id}`} className="text-gray-900 hover:text-gray-700"><Pencil size={18} /></Link>,
     },
     {
-      key: 'view_panel', label: 'View Panel',
-      render: (m: Merchant) => <Link to={`/merchant?as=${m.id}`} className="text-xs rounded bg-red-700 px-2 py-1 text-white hover:bg-red-800">View</Link>,
-    },
-    {
       key: 'is_active', label: 'Merchant Status',
       render: (m: Merchant) => <strong className={m.is_active ? 'text-gray-900' : 'text-gray-900'}>{m.is_active ? 'Active' : 'Inactive'}</strong>,
     },
@@ -93,6 +99,12 @@ export function ViewMerchants() {
 
   return (
     <div>
+      {successMsg && (
+        <div className="mb-4 rounded border border-green-200 bg-white py-2 text-center text-sm">
+          <span className="font-bold text-green-600">Success! </span>
+          <span className="text-green-600">{successMsg}</span>
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-red-700">Manage Merchants</h1>
         <Link to="/admin/merchants/add">

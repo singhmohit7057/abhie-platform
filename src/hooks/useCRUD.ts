@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import toast from 'react-hot-toast'
 
 interface UseCRUDOptions {
   table: string
@@ -33,9 +32,7 @@ export function useCRUD<T extends { id: string }>({
     }
 
     const { data: result, error } = await query
-    if (error) {
-      toast.error(`Failed to fetch ${table}`)
-    } else {
+    if (!error) {
       setData(result as T[])
     }
     setLoading(false)
@@ -48,35 +45,23 @@ export function useCRUD<T extends { id: string }>({
 
   const create = async (item: Omit<T, 'id' | 'created_at'>) => {
     const { error } = await supabase.from(table).insert(item as any)
-    if (error) {
-      toast.error(`Failed to create: ${error.message}`)
-      return false
-    }
-    toast.success('Created successfully')
+    if (error) return { ok: false, error: error.message }
     await fetchData()
-    return true
+    return { ok: true, error: null }
   }
 
   const update = async (id: string, updates: Partial<T>) => {
     const { error } = await supabase.from(table).update(updates as any).eq('id', id)
-    if (error) {
-      toast.error(`Failed to update: ${error.message}`)
-      return false
-    }
-    toast.success('Updated successfully')
+    if (error) return { ok: false, error: error.message }
     await fetchData()
-    return true
+    return { ok: true, error: null }
   }
 
   const remove = async (id: string) => {
     const { error } = await supabase.from(table).delete().eq('id', id)
-    if (error) {
-      toast.error(`Failed to delete: ${error.message}`)
-      return false
-    }
-    toast.success('Deleted successfully')
+    if (error) return { ok: false, error: error.message }
     await fetchData()
-    return true
+    return { ok: true, error: null }
   }
 
   return { data, loading, fetchData, create, update, remove }
