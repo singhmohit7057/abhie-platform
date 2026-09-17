@@ -33,6 +33,7 @@ export function AddMerchant() {
   const [form, setForm] = useState(getEditData())
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState('')
+  const [userIdEdited, setUserIdEdited] = useState(false)
   const [merchantAuthId, setMerchantAuthId] = useState('')
   const [originalEmail, setOriginalEmail] = useState('')
   const [originalPhone, setOriginalPhone] = useState('')
@@ -76,6 +77,7 @@ export function AddMerchant() {
       if (m) {
         const profile = profiles.find(p => p.id === m.user_id)
         setMerchantAuthId(m.user_id || '')
+        setUserIdEdited(true) // in edit mode, user_id is pre-filled — don't auto-override
         const email = profile?.email || ''
         const phone = profile?.phone || ''
         setOriginalEmail(email)
@@ -265,7 +267,11 @@ export function AddMerchant() {
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Email:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required={!editId} /></td>
+                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="email" value={form.email} onChange={(e) => {
+                  const email = e.target.value
+                  const prefix = email.split('@')[0]
+                  setForm(f => ({ ...f, email, ...(!userIdEdited && !editId ? { user_id: prefix } : {}) }))
+                }} required={!editId} /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Password:</td>
@@ -280,11 +286,11 @@ export function AddMerchant() {
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Phone (Mobile):</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="tel" maxLength={10} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })} /></td>
+                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="tel" maxLength={10} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })} required /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">User ID:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} /></td>
+                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.user_id} onChange={(e) => { setUserIdEdited(true); setForm({ ...form, user_id: e.target.value }) }} required /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Address:</td>
