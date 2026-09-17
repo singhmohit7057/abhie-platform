@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase, supabaseOtp } from '../../lib/supabase'
-import { msg91SendOtp, msg91VerifyOtp, msg91ResendOtp } from '../../lib/msg91'
 import { Button } from '../../components/ui/Button'
 
 export function EditAccount() {
@@ -12,7 +11,7 @@ export function EditAccount() {
   const [formError, setFormError] = useState('')
 
   const [showOtp, setShowOtp] = useState(false)
-  const [otpMode, setOtpMode] = useState<'email' | 'phone'>('email')
+  const otpMode = 'email' as const
   const [otpStep, setOtpStep] = useState<1 | 2>(1)
   const [otp1, setOtp1] = useState('')
   const [otp2, setOtp2] = useState('')
@@ -48,17 +47,18 @@ export function EditAccount() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); setFormError('')
     if (!emailChanged && !phoneChanged) { await saveProfile(); return }
-    const mode: 'email' | 'phone' = emailChanged ? 'email' : 'phone'
-    setOtpMode(mode); setShowOtp(true); setOtpStep(1); setOtp1(''); setOtp2(''); setOtpError('')
-    setOtpLoading(true)
-    let error: any = null
-    if (mode === 'email') {
-      const r = await supabase.auth.signInWithOtp({ email: original.email, options: { shouldCreateUser: false } })
-      error = r.error
-    } else {
-      const r = await msg91SendOtp(original.phone)
-      if (r.type !== 'success') error = { message: r.message }
+    if (!emailChanged && phoneChanged) {
+      // Phone-only: save directly, no OTP
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await supabase.from('profiles').update({ phone: form.phone || null, full_name: form.full_name, user_id: form.user_id || null }).eq('id', user.id)
+      setOriginal(o => ({ ...o, phone: form.phone }))
+      setSuccessMsg('Account updated successfully!'); setTimeout(() => setSuccessMsg(''), 4000)
+      return
     }
+    // Email change: 2-step email OTP
+    setShowOtp(true); setOtpStep(1); setOtp1(''); setOtp2(''); setOtpError('')
+    setOtpLoading(true)
+    const { error } = await supabase.auth.signInWithOtp({ email: original.email })
     setOtpLoading(false)
     if (error) { setOtpError(error.message); return }
     startTimer(setResend1, timer1)
@@ -74,31 +74,15 @@ export function EditAccount() {
   async function verifyOtp1() {
     if (!otp1 || otp1.length !== 6) { setOtpError('Enter the 6-digit OTP.'); return }
     setOtpError(''); setOtpLoading(true)
-    let step1Error = false
-    if (otpMode === 'email') {
-      const r = await supabaseOtp.auth.verifyOtp({ email: original.email, token: otp1, type: 'email' })
-      if (r.error) step1Error = true
-    } else {
-      const r = await msg91VerifyOtp(original.phone, otp1)
-      if (r.type !== 'success') step1Error = true
-    }
+    const r1 = await supabaseOtp.auth.verifyOtp({ email: original.email, token: otp1, type: 'email' })
     setOtpLoading(false)
-    if (step1Error) { setOtpError('Invalid or expired OTP.'); return }
+    if (r1.error) { setOtpError('Invalid or expired OTP.'); return }
 
-    // Step 2: send OTP to new value
+    // Step 2: send OTP to new email
     setOtpStep(2); setOtp2(''); setOtpLoading(true)
-    // For email: use updateUser → triggers "Change Email Address" template (not "Confirm Signup")
-    let step2SendError: any = null
-    if (otpMode === 'email') {
-      const r = await supabase.auth.updateUser({ email: form.email })
-      step2SendError = r.error
-    } else {
-      const r = await msg91SendOtp(form.phone)
-      if (r.type !== 'success') step2SendError = { message: r.message }
-    }
-    const step2Res = { error: step2SendError }
+    const { error: step2Err } = await supabase.auth.updateUser({ email: form.email })
     setOtpLoading(false)
-    if (step2Res.error) { setOtpError(step2Res.error.message); return }
+    if (step2Err) { setOtpError(step2Err.message); return }
     startTimer(setResend2, timer2)
   }
 
@@ -106,16 +90,8 @@ export function EditAccount() {
     if (!otp2 || otp2.length !== 6) { setOtpError('Enter the 6-digit OTP.'); return }
     setOtpError(''); setOtpLoading(true)
     const { data: { user: adminUser } } = await supabase.auth.getUser()
-    // email_change type for email; sms for phone
-    let step2Error = false
-    if (otpMode === 'email') {
-      const r = await supabaseOtp.auth.verifyOtp({ email: form.email, token: otp2, type: 'email' })
-      if (r.error) step2Error = true
-    } else {
-      const r = await msg91VerifyOtp(form.phone, otp2)
-      if (r.type !== 'success') step2Error = true
-    }
-    if (step2Error) { setOtpError('Invalid or expired OTP.'); setOtpLoading(false); return }
+    const r2 = await supabaseOtp.auth.verifyOtp({ email: form.email, token: otp2, type: 'email' })
+    if (r2.error) { setOtpError('Invalid or expired OTP.'); setOtpLoading(false); return }
 
     // email already updated by verifyOtp(email_change) — just sync profiles
     if (adminUser) await supabase.from('profiles').update({
@@ -197,7 +173,7 @@ export function EditAccount() {
                       <Button type="button" disabled={otpLoading} onClick={verifyOtp1}>{otpLoading ? 'Verifying…' : 'Verify OTP'}</Button>
                       {resend1 > 0
                         ? <span style={{ fontSize: 12, color: '#9ca3af' }}>Resend in {resend1}s</span>
-                        : <button type="button" onClick={async () => { setOtpLoading(true); otpMode === 'email' ? await supabase.auth.signInWithOtp({ email: original.email, options: { shouldCreateUser: false } }) : await msg91ResendOtp(original.phone); setOtpLoading(false); startTimer(setResend1, timer1) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>}
+                        : <button type="button" onClick={async () => { setOtpLoading(true); await supabase.auth.signInWithOtp({ email: original.email }); setOtpLoading(false); startTimer(setResend1, timer1) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>}
                     </div>
                 )}
                 {otpStep === 2 && <p style={{ fontSize: 12, color: '#16a34a', fontWeight: 500 }}>✓ Verified!</p>}
@@ -214,7 +190,7 @@ export function EditAccount() {
                       <Button type="button" disabled={otpLoading || otpStep !== 2} onClick={verifyOtp2}>{otpLoading ? 'Verifying…' : 'Verify & Save'}</Button>
                       {otpStep === 2 && (resend2 > 0
                         ? <span style={{ fontSize: 12, color: '#9ca3af' }}>Resend in {resend2}s</span>
-                        : <button type="button" onClick={async () => { setOtpLoading(true); otpMode === 'email' ? await supabase.auth.signInWithOtp({ email: form.email }) : await msg91ResendOtp(form.phone); setOtpLoading(false); startTimer(setResend2, timer2) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
+                        : <button type="button" onClick={async () => { setOtpLoading(true); await supabase.auth.signInWithOtp({ email: form.email }); setOtpLoading(false); startTimer(setResend2, timer2) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
                       )}
                     </div>
                 }

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, supabaseOtp } from '../../lib/supabase'
-import { msg91SendOtp, msg91VerifyOtp, msg91ResendOtp } from '../../lib/msg91'
 import { useCRUD } from '../../hooks/useCRUD'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
@@ -51,9 +50,10 @@ export function AddMerchant() {
   const timer1 = useRef<any>(null)
   const timer2 = useRef<any>(null)
   const pendingPayload = useRef<any>(null)
+  const [otpEmail, setOtpEmail] = useState('')  // actual auth email used for OTP
 
   const emailChanged = editId ? form.email !== originalEmail : false
-  const phoneChanged = editId ? form.phone !== originalPhone : false
+  void originalPhone // kept for future SMS integration
 
   function startTimer(set: React.Dispatch<React.SetStateAction<number>>, ref: React.MutableRefObject<any>) {
     set(30)
@@ -135,23 +135,16 @@ export function AddMerchant() {
     navigate('/admin/merchants', { state: { success: 'Merchant information has been updated successfully!' } })
   }
 
-  // otpMode: 'email' = email 2-step, 'phone' = phone 2-step SMS, 'other' = 1-step SMS to current phone
-  const [otpMode, setOtpMode] = useState<'email' | 'phone' | 'other'>('email')
+  // otpMode: 'email' = 2-step email OTP, 'other' = 1-step admin email OTP (for phone/field changes)
+  const [otpMode, setOtpMode] = useState<'email' | 'other'>('email')
 
   async function verifyOtp1() {
     if (!otp1 || otp1.length !== 6) { setOtpError('Enter the 6-digit OTP.'); return }
     setOtpError(''); setOtpLoading(true)
-    // Use isolated OTP client — does NOT affect main admin session
-    let step1Error = false
-    if (otpMode === 'email') {
-      const r = await supabaseOtp.auth.verifyOtp({ email: originalEmail, token: otp1, type: 'email' })
-      if (r.error) step1Error = true
-    } else {
-      const r = await msg91VerifyOtp(originalPhone, otp1)
-      if (r.type !== 'success') step1Error = true
-    }
+    // Verify using the same email that was used to send (otpEmail = actual auth email)
+    const r1 = await supabaseOtp.auth.verifyOtp({ email: otpEmail, token: otp1, type: 'email' })
     setOtpLoading(false)
-    if (step1Error) { setOtpError('Invalid or expired OTP.'); return }
+    if (r1.error) { setOtpError('Invalid or expired OTP.'); return }
     if (otpMode === 'other') {
       await performEditSave(pendingPayload.current); return
     }
@@ -174,13 +167,14 @@ export function AddMerchant() {
         return
       }
       // Step 2: Now send OTP to new email to verify ownership
-      const { error: otpErr } = await supabase.auth.signInWithOtp({ email: form.email, options: { shouldCreateUser: false } })
+      const { error: otpErr } = await supabaseOtp.auth.signInWithOtp({ email: form.email })
       setOtpLoading(false)
       if (otpErr) { setOtpError(otpErr.message); return }
     } else {
-      const r = await msg91SendOtp(form.phone)
+      // Phone change step 2 → OTP to new email (since SMS not configured)
+      const { error } = await supabaseOtp.auth.signInWithOtp({ email: form.email })
       setOtpLoading(false)
-      if (r.type !== 'success') { setOtpError(r.message || 'Failed to send OTP'); return }
+      if (error) { setOtpError(error.message); return }
     }
     startTimer(setResend2, timer2)
   }
@@ -188,16 +182,9 @@ export function AddMerchant() {
   async function verifyOtp2() {
     if (!otp2 || otp2.length !== 6) { setOtpError('Enter the 6-digit OTP.'); return }
     setOtpError(''); setOtpLoading(true)
-    let step2Error = false
-    if (otpMode === 'email') {
-      const r = await supabaseOtp.auth.verifyOtp({ email: form.email, token: otp2, type: 'email' })
-      if (r.error) step2Error = true
-    } else {
-      const r = await msg91VerifyOtp(form.phone, otp2)
-      if (r.type !== 'success') step2Error = true
-    }
+    const r2 = await supabaseOtp.auth.verifyOtp({ email: form.email, token: otp2, type: 'email' })
     setOtpLoading(false)
-    if (step2Error) { setOtpError('Invalid or expired OTP.'); return }
+    if (r2.error) { setOtpError('Invalid or expired OTP.'); return }
     await performEditSave(pendingPayload.current)
   }
 
@@ -265,18 +252,24 @@ export function AddMerchant() {
       {
         // Always require OTP for any edit save
         pendingPayload.current = payload
-        const mode: 'email' | 'phone' | 'other' = emailChanged ? 'email' : phoneChanged ? 'phone' : 'other'
+        // 'email' = 2-step email OTP; 'other' = 1-step admin email OTP
+        const mode: 'email' | 'other' = emailChanged ? 'email' : 'other'
         setOtpMode(mode)
         setShowOtp(true); setOtpStep(1); setOtp1(''); setOtp2(''); setOtpError('')
         setOtpLoading(true)
-        let otpErr: any = null
-        if (mode === 'email') {
-          const r = await supabase.auth.signInWithOtp({ email: originalEmail, options: { shouldCreateUser: false } })
-          otpErr = r.error
-        } else {
-          const r = await msg91SendOtp(originalPhone)
-          if (r.type !== 'success') otpErr = { message: r.message }
+        // Fetch merchant's ACTUAL auth email (profiles table may be stale)
+        let sendTo = originalEmail
+        if (merchantAuthId) {
+          const sk = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+          const supaUrl = import.meta.env.VITE_SUPABASE_URL
+          const authRes = await fetch(`${supaUrl}/auth/v1/admin/users/${merchantAuthId}`, {
+            headers: { apikey: sk, Authorization: `Bearer ${sk}` }
+          })
+          const authUser = await authRes.json()
+          if (authUser?.email) sendTo = authUser.email
         }
+        setOtpEmail(sendTo)
+        const { error: otpErr } = await supabaseOtp.auth.signInWithOtp({ email: sendTo })
         setOtpLoading(false)
         if (otpErr) { setOtpError(otpErr.message); return }
         startTimer(setResend1, timer1)
@@ -436,7 +429,7 @@ export function AddMerchant() {
           <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 460, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
             <div style={{ background: '#bf282d', padding: '12px 20px' }}>
               <p style={{ color: '#fff', fontWeight: 600, fontSize: 14, margin: 0 }}>
-                {otpMode === 'other' ? 'Confirm Changes via Phone OTP' : 'Verify to Save Changes'}
+                {otpMode === 'other' ? 'Confirm Changes via Email OTP' : 'Verify to Save Changes'}
               </p>
             </div>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -444,12 +437,10 @@ export function AddMerchant() {
               {/* Step 1 */}
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, background: '#f9fafb', padding: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: '#bf282d', marginBottom: 4 }}>
-                  {otpMode === 'other' ? 'Step 1 of 1' : 'Step 1 of 2'} — {otpMode === 'email' ? 'Verify Current Email' : 'Verify via Registered Phone'}
+                  {otpMode === 'other' ? 'Step 1 of 1' : 'Step 1 of 2'} — Verify via Email OTP
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
-                  {otpMode === 'email'
-                    ? <>OTP sent to merchant's current email: <strong>{originalEmail}</strong></>
-                    : <>OTP has been sent to the merchant's registered phone number: <strong>{originalPhone}</strong></>}
+                  <>OTP sent to merchant's email: <strong>{otpEmail || originalEmail}</strong></>
                 </p>
                 {otpStep === 1 && (otpLoading && resend1 === 0
                   ? <p style={{ fontSize: 12, color: '#6b7280' }}>Sending OTP…</p>
@@ -458,7 +449,7 @@ export function AddMerchant() {
                       <Button type="button" disabled={otpLoading} onClick={verifyOtp1}>{otpLoading ? 'Verifying…' : 'Verify OTP'}</Button>
                       {resend1 > 0
                         ? <span style={{ fontSize: 12, color: '#9ca3af' }}>Resend in {resend1}s</span>
-                        : <button type="button" onClick={async () => { setOtpLoading(true); otpMode === 'email' ? await supabase.auth.signInWithOtp({ email: originalEmail, options: { shouldCreateUser: false } }) : await msg91ResendOtp(originalPhone); setOtpLoading(false); startTimer(setResend1, timer1) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
+                        : <button type="button" onClick={async () => { setOtpLoading(true); await supabaseOtp.auth.signInWithOtp({ email: otpEmail || originalEmail }); setOtpLoading(false); startTimer(setResend1, timer1) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
                       }
                     </div>
                 )}
@@ -480,7 +471,7 @@ export function AddMerchant() {
                         <Button type="button" disabled={otpLoading || otpStep !== 2} onClick={verifyOtp2}>{otpLoading ? 'Verifying…' : 'Verify & Save'}</Button>
                         {otpStep === 2 && (resend2 > 0
                           ? <span style={{ fontSize: 12, color: '#9ca3af' }}>Resend in {resend2}s</span>
-                          : <button type="button" onClick={async () => { setOtpLoading(true); otpMode === 'email' ? await supabase.auth.signInWithOtp({ email: form.email }) : await msg91ResendOtp(form.phone); setOtpLoading(false); startTimer(setResend2, timer2) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
+                          : <button type="button" onClick={async () => { setOtpLoading(true); await supabaseOtp.auth.signInWithOtp({ email: form.email }); setOtpLoading(false); startTimer(setResend2, timer2) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
                         )}
                       </div>
                   }
