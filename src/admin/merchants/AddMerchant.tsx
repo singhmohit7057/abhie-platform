@@ -33,7 +33,50 @@ export function AddMerchant() {
   const [form, setForm] = useState(getEditData())
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [userIdEdited, setUserIdEdited] = useState(false)
+
+  function validateField(name: string, value: string) {
+    if (name === 'email') {
+      if (!value) return 'Email is required.'
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Enter a valid email address.'
+    }
+    if (name === 'phone') {
+      if (!value) return 'Phone is required.'
+      if (!/^\d{10}$/.test(value)) return 'Phone must be exactly 10 digits.'
+    }
+    if (name === 'password') {
+      if (value && value.length < 3) return 'Minimum password length should be 3.'
+    }
+    if (name === 'business_type' && !value) return 'Category is required.'
+    return ''
+  }
+
+  async function handleFieldBlur(name: string, value: string) {
+    const err = validateField(name, value)
+    if (err) { setFieldErrors(prev => ({ ...prev, [name]: err })); return }
+
+    // Check for duplicates in DB (skip if same as current in edit mode)
+    if (name === 'email' && value) {
+      const { data } = await supabase.from('profiles').select('id').eq('email', value).maybeSingle()
+      if (data?.id && data.id !== merchantAuthId) {
+        setFieldErrors(prev => ({ ...prev, email: 'This email is already registered to another merchant.' })); return
+      }
+    }
+    if (name === 'phone' && value && value.length === 10) {
+      const { data } = await supabase.from('profiles').select('id').eq('phone', value).maybeSingle()
+      if (data?.id && data.id !== merchantAuthId) {
+        setFieldErrors(prev => ({ ...prev, phone: 'This phone number is already registered to another merchant.' })); return
+      }
+    }
+    if (name === 'user_id' && value) {
+      const { data } = await supabase.from('profiles').select('id').eq('user_id', value).maybeSingle()
+      if (data?.id && data.id !== merchantAuthId) {
+        setFieldErrors(prev => ({ ...prev, user_id: 'This User ID is already taken.' })); return
+      }
+    }
+    setFieldErrors(prev => ({ ...prev, [name]: '' }))
+  }
   const [merchantAuthId, setMerchantAuthId] = useState('')
   const [originalEmail, setOriginalEmail] = useState('')
   const [originalPhone, setOriginalPhone] = useState('')
@@ -191,6 +234,29 @@ export function AddMerchant() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    // Validate all fields before submit
+    const errors: Record<string, string> = {}
+    const emailErr = validateField('email', form.email)
+    const phoneErr = validateField('phone', form.phone)
+    const categoryErr = validateField('business_type', form.business_type)
+    if (emailErr) errors.email = emailErr
+    if (phoneErr) errors.phone = phoneErr
+    if (categoryErr) errors.business_type = categoryErr
+    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
+    // Check duplicates on submit
+    if (!editId) {
+      const [emailCheck, phoneCheck, userIdCheck] = await Promise.all([
+        supabase.from('profiles').select('id').eq('email', form.email).maybeSingle(),
+        supabase.from('profiles').select('id').eq('phone', form.phone).maybeSingle(),
+        form.user_id ? supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle() : Promise.resolve({ data: null }),
+      ])
+      const dupErrors: Record<string, string> = {}
+      if (emailCheck.data?.id) dupErrors.email = 'This email is already registered to another merchant.'
+      if (phoneCheck.data?.id) dupErrors.phone = 'This phone number is already registered to another merchant.'
+      if (userIdCheck.data?.id) dupErrors.user_id = 'This User ID is already taken.'
+      if (Object.keys(dupErrors).length > 0) { setFieldErrors(dupErrors); return }
+    }
+    setFieldErrors({})
 
     if (!editId && form.email && form.password) {
       const serviceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
@@ -299,7 +365,7 @@ export function AddMerchant() {
           <table className="w-full max-w-xl text-sm">
             <tbody>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Merchant Name:</td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Merchant Name: <span className="text-red-500">*</span></td>
                 <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.store_name} onChange={(e) => setForm({ ...form, store_name: e.target.value })} required /></td>
               </tr>
               <tr className="border-b border-gray-100">
@@ -307,31 +373,42 @@ export function AddMerchant() {
                 <td className="py-2"><input className="w-full rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm" value={new Date().toLocaleDateString('en-GB').replace(/\//g, '-')} disabled /></td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Email:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="email" value={form.email} onChange={(e) => {
-                  const email = e.target.value
-                  const prefix = email.split('@')[0]
-                  setForm(f => ({ ...f, email, ...(!userIdEdited && !editId ? { user_id: prefix } : {}) }))
-                }} required={!editId} /></td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Email: <span className="text-red-500">*</span></td>
+                <td className="py-2">
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type="text" value={form.email} onChange={(e) => {
+                    const email = e.target.value
+                    const prefix = email.split('@')[0]
+                    setForm(f => ({ ...f, email, ...(!userIdEdited && !editId ? { user_id: prefix } : {}) }))
+                    if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: validateField('email', email) }))
+                  }} onBlur={(e) => handleFieldBlur('email', e.target.value)} required={!editId} />
+                  {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
+                </td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Password:</td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Password: <span className="text-red-500">*</span></td>
                 <td className="py-2">
                   <div className="relative">
-                    <input className="w-full rounded border border-gray-300 px-2 py-1.5 pr-9 text-sm focus:border-red-500 focus:outline-none" type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editId} />
+                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} required={!editId} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Phone (Mobile):</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" type="tel" maxLength={10} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })} required /></td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Phone (Mobile): <span className="text-red-500">*</span></td>
+                <td className="py-2">
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type="tel" maxLength={10} value={form.phone} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 10); setForm({ ...form, phone: v }); if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: validateField('phone', v) })) }} onBlur={(e) => handleFieldBlur('phone', e.target.value)} required />
+                  {fieldErrors.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>}
+                </td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">User ID:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.user_id} onChange={(e) => { setUserIdEdited(true); setForm({ ...form, user_id: e.target.value }) }} required /></td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">User ID: <span className="text-red-500">*</span></td>
+                <td className="py-2">
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.user_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} value={form.user_id} onChange={(e) => { setUserIdEdited(true); setForm({ ...form, user_id: e.target.value }); if (fieldErrors.user_id) setFieldErrors(prev => ({ ...prev, user_id: '' })) }} onBlur={(e) => handleFieldBlur('user_id', e.target.value)} required />
+                  {fieldErrors.user_id && <p className="mt-1 text-xs text-red-600">{fieldErrors.user_id}</p>}
+                </td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Address:</td>
@@ -389,15 +466,16 @@ export function AddMerchant() {
                 <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Category:</td>
+                <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Category: <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <select className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none" value={form.business_type} onChange={(e) => setForm({ ...form, business_type: e.target.value })}>
+                  <select className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.business_type ? 'border-red-500' : 'border-gray-300 focus:border-gray-900'}`} value={form.business_type} onChange={(e) => { setForm({ ...form, business_type: e.target.value }); if (fieldErrors.business_type) setFieldErrors(prev => ({ ...prev, business_type: validateField('business_type', e.target.value) })) }} onBlur={(e) => handleFieldBlur('business_type', e.target.value)} required>
                     <option value="">--- Select ---</option>
                     <option value="All">All Categories</option>
                     {categories.filter(c => c.is_active).map(c => (
                       <option key={c.id} value={c.name}>{c.name}</option>
                     ))}
                   </select>
+                  {fieldErrors.business_type && <p className="mt-1 text-xs text-red-600">{fieldErrors.business_type}</p>}
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
