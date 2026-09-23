@@ -4,12 +4,13 @@ import { Pencil } from 'lucide-react'
 import { useCRUD } from '../../hooks/useCRUD'
 import { DataTable } from '../../components/shared/DataTable'
 import { Button } from '../../components/ui/Button'
-import type { Merchant, Store, Profile } from '../../types'
+import type { Merchant, Store, Profile, Category } from '../../types'
 
 export function ViewMerchants() {
   const { data, loading } = useCRUD<Merchant>({ table: 'merchants' })
   const { data: stores } = useCRUD<Store>({ table: 'stores' })
   const { data: profiles } = useCRUD<Profile>({ table: 'profiles' })
+  const { data: categories } = useCRUD<Category>({ table: 'categories' })
   const location = useLocation()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -56,7 +57,14 @@ export function ViewMerchants() {
   }
 
   const filtered = data.filter(m => {
-    if (search && !m.store_name.toLowerCase().includes(search.toLowerCase())) return false
+    if (search) {
+      const profile = profiles.find(p => p.id === m.user_id)
+      const store = stores.find(s => s.merchant_id === m.id)
+      const phone = profile?.phone || store?.phone || ''
+      const nameMatch = m.store_name.toLowerCase().includes(search.toLowerCase())
+      const phoneMatch = phone.includes(search)
+      if (!nameMatch && !phoneMatch) return false
+    }
     if (categoryFilter && !m.business_type?.toLowerCase().includes(categoryFilter.toLowerCase())) return false
     if (statusFilter === 'true' && !m.is_active) return false
     if (statusFilter === 'false' && m.is_active) return false
@@ -93,7 +101,17 @@ export function ViewMerchants() {
     },
     {
       key: 'is_active', label: 'Merchant Status',
-      render: (m: Merchant) => <strong className={m.is_active ? 'text-gray-900' : 'text-gray-900'}>{m.is_active ? 'Active' : 'Inactive'}</strong>,
+      render: (m: Merchant) => {
+        if (m.is_active) return <strong className="text-gray-900">Active</strong>
+        const cat = categories.find(c => c.name === m.business_type)
+        const isCatInactive = cat && !cat.is_active
+        return (
+          <div>
+            <strong className="text-gray-900">Inactive</strong>
+            <p className="text-xs text-gray-500">({isCatInactive ? 'Category' : 'Merchant'})</p>
+          </div>
+        )
+      },
     },
   ]
 

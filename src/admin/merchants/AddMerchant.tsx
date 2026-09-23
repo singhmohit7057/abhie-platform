@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase, supabaseOtp } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { useCRUD } from '../../hooks/useCRUD'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
@@ -34,7 +34,6 @@ export function AddMerchant() {
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [userIdEdited, setUserIdEdited] = useState(false)
 
   function validateField(name: string, value: string) {
     if (name === 'email') {
@@ -43,7 +42,7 @@ export function AddMerchant() {
     }
     if (name === 'phone') {
       if (!value) return 'Phone is required.'
-      if (!/^\d{10}$/.test(value)) return 'Phone must be exactly 10 digits.'
+      if (!/^\d{10}$/.test(value)) return 'Enter a valid phone number.'
     }
     if (name === 'password') {
       if (value && value.length < 3) return 'Minimum password length should be 3.'
@@ -60,71 +59,47 @@ export function AddMerchant() {
     if (name === 'email' && value) {
       const { data } = await supabase.from('profiles').select('id').eq('email', value).maybeSingle()
       if (data?.id && data.id !== merchantAuthId) {
-        setFieldErrors(prev => ({ ...prev, email: 'This email is already registered to another merchant.' })); return
+        setFieldErrors(prev => ({ ...prev, email: 'Email is already registered.' })); return
       }
     }
     if (name === 'phone' && value && value.length === 10) {
       const { data } = await supabase.from('profiles').select('id').eq('phone', value).maybeSingle()
       if (data?.id && data.id !== merchantAuthId) {
-        setFieldErrors(prev => ({ ...prev, phone: 'This phone number is already registered to another merchant.' })); return
+        setFieldErrors(prev => ({ ...prev, phone: 'Phone Number is already registered.' })); return
+      }
+    }
+    if (name === 'store_name' && value) {
+      const { data } = await supabase.from('merchants').select('id').ilike('store_name', value).maybeSingle()
+      if (data?.id && data.id !== editId) {
+        setFieldErrors(prev => ({ ...prev, store_name: 'Duplicate Merchant.' })); return
       }
     }
     if (name === 'user_id' && value) {
       const { data } = await supabase.from('profiles').select('id').eq('user_id', value).maybeSingle()
       if (data?.id && data.id !== merchantAuthId) {
-        setFieldErrors(prev => ({ ...prev, user_id: 'This User ID is already taken.' })); return
+        setFieldErrors(prev => ({ ...prev, user_id: 'User Id is not available.' })); return
       }
     }
     setFieldErrors(prev => ({ ...prev, [name]: '' }))
   }
   const [merchantAuthId, setMerchantAuthId] = useState('')
+  const formInitialized = useRef(false)
   const [originalEmail, setOriginalEmail] = useState('')
-  const [originalPhone, setOriginalPhone] = useState('')
-
-  // OTP popup
-  const [showOtp, setShowOtp] = useState(false)
-  const [otpStep, setOtpStep] = useState<1 | 2>(1)
-  const [otp1, setOtp1] = useState('')
-  const [otp2, setOtp2] = useState('')
-  const [otpLoading, setOtpLoading] = useState(false)
-  const [otpError, setOtpError] = useState('')
-  const [resend1, setResend1] = useState(0)
-  const [resend2, setResend2] = useState(0)
-  const timer1 = useRef<any>(null)
-  const timer2 = useRef<any>(null)
-  const pendingPayload = useRef<any>(null)
-  const [otpEmail, setOtpEmail] = useState('')  // actual auth email used for OTP
-
-  const emailChanged = editId ? form.email !== originalEmail : false
-  void originalPhone // kept for future SMS integration
-
-  function startTimer(set: React.Dispatch<React.SetStateAction<number>>, ref: React.MutableRefObject<any>) {
-    set(30)
-    if (ref.current) clearInterval(ref.current)
-    ref.current = setInterval(() => {
-      set((p: number) => { if (p <= 1) { clearInterval(ref.current); return 0 } return p - 1 })
-    }, 1000)
-  }
-
-
-  function closeOtp() {
-    setShowOtp(false); setOtpStep(1); setOtp1(''); setOtp2(''); setOtpError('')
-    setResend1(0); setResend2(0)
-    if (timer1.current) clearInterval(timer1.current)
-    if (timer2.current) clearInterval(timer2.current)
-  }
 
   useEffect(() => {
     if (editId && merchantsData.length > 0) {
       const m = merchantsData.find(m => m.id === editId)
       if (m) {
         const profile = profiles.find(p => p.id === m.user_id)
+        // Only mark initialized when profile data is loaded; re-run until then
+        if (formInitialized.current && profile) return
+        if (profile) formInitialized.current = true
         setMerchantAuthId(m.user_id || '')
-        setUserIdEdited(true) // in edit mode, user_id is pre-filled — don't auto-override
+        
         const email = profile?.email || ''
         const phone = profile?.phone || ''
         setOriginalEmail(email)
-        setOriginalPhone(phone)
+        // setOriginalPhone removed
         setForm(prev => ({
           ...prev,
           store_name: m.store_name, user_id: (profile as any)?.user_id || '',
@@ -174,61 +149,7 @@ export function AddMerchant() {
         await supabase.from('profiles').delete().eq('id', oldUser.id)
       }
     }
-    closeOtp()
     navigate('/admin/merchants', { state: { success: 'Merchant information has been updated successfully!' } })
-  }
-
-  // otpMode: 'email' = 2-step email OTP, 'other' = 1-step admin email OTP (for phone/field changes)
-  const [otpMode, setOtpMode] = useState<'email' | 'other'>('email')
-
-  async function verifyOtp1() {
-    if (!otp1 || otp1.length !== 6) { setOtpError('Enter the 6-digit OTP.'); return }
-    setOtpError(''); setOtpLoading(true)
-    // Verify using the same email that was used to send (otpEmail = actual auth email)
-    const r1 = await supabaseOtp.auth.verifyOtp({ email: otpEmail, token: otp1, type: 'email' })
-    setOtpLoading(false)
-    if (r1.error) { setOtpError('Invalid or expired OTP.'); return }
-    if (otpMode === 'other') {
-      await performEditSave(pendingPayload.current); return
-    }
-    // Step 2: send OTP to new value
-    setOtpStep(2); setOtp2(''); setOtpLoading(true)
-    if (otpMode === 'email') {
-      // Step 1: Update merchant email via admin API (immediate, no confirm)
-      const sk = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-      const supaUrl = import.meta.env.VITE_SUPABASE_URL
-      const res = await fetch(`${supaUrl}/auth/v1/admin/users/${merchantAuthId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', apikey: sk, Authorization: `Bearer ${sk}` },
-        body: JSON.stringify({ email: form.email, email_confirm: true }),
-      })
-      if (!res.ok) {
-        const j = await res.json()
-        const msg: string = j.message || ''
-        setOtpError(msg.includes('duplicate') || msg.includes('unique') ? 'This email is already registered to another account.' : msg || 'Failed to update email')
-        setOtpLoading(false)
-        return
-      }
-      // Step 2: Now send OTP to new email to verify ownership
-      const { error: otpErr } = await supabaseOtp.auth.signInWithOtp({ email: form.email })
-      setOtpLoading(false)
-      if (otpErr) { setOtpError(otpErr.message); return }
-    } else {
-      // Phone change step 2 → OTP to new email (since SMS not configured)
-      const { error } = await supabaseOtp.auth.signInWithOtp({ email: form.email })
-      setOtpLoading(false)
-      if (error) { setOtpError(error.message); return }
-    }
-    startTimer(setResend2, timer2)
-  }
-
-  async function verifyOtp2() {
-    if (!otp2 || otp2.length !== 6) { setOtpError('Enter the 6-digit OTP.'); return }
-    setOtpError(''); setOtpLoading(true)
-    const r2 = await supabaseOtp.auth.verifyOtp({ email: form.email, token: otp2, type: 'email' })
-    setOtpLoading(false)
-    if (r2.error) { setOtpError('Invalid or expired OTP.'); return }
-    await performEditSave(pendingPayload.current)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,15 +166,17 @@ export function AddMerchant() {
     if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
     // Check duplicates on submit
     if (!editId) {
-      const [emailCheck, phoneCheck, userIdCheck] = await Promise.all([
+      const [nameCheck, emailCheck, phoneCheck, userIdCheck] = await Promise.all([
+        supabase.from('merchants').select('id').ilike('store_name', form.store_name).maybeSingle(),
         supabase.from('profiles').select('id').eq('email', form.email).maybeSingle(),
         supabase.from('profiles').select('id').eq('phone', form.phone).maybeSingle(),
         form.user_id ? supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle() : Promise.resolve({ data: null }),
       ])
       const dupErrors: Record<string, string> = {}
-      if (emailCheck.data?.id) dupErrors.email = 'This email is already registered to another merchant.'
-      if (phoneCheck.data?.id) dupErrors.phone = 'This phone number is already registered to another merchant.'
-      if (userIdCheck.data?.id) dupErrors.user_id = 'This User ID is already taken.'
+      if (nameCheck.data?.id) dupErrors.store_name = 'Duplicate Merchant.'
+      if (emailCheck.data?.id) dupErrors.email = 'Email is already registered.'
+      if (phoneCheck.data?.id) dupErrors.phone = 'Phone Number is already registered.'
+      if (userIdCheck.data?.id) dupErrors.user_id = 'User Id is not available.'
       if (Object.keys(dupErrors).length > 0) { setFieldErrors(dupErrors); return }
     }
     setFieldErrors({})
@@ -298,7 +221,7 @@ export function AddMerchant() {
           const { data } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle()
           if (data?.id) break
         }
-        await supabase.from('profiles').update({ role: 'merchant', full_name: form.store_name, phone: form.phone || null }).eq('id', userId)
+        await supabase.from('profiles').update({ role: 'merchant', full_name: form.store_name, phone: form.phone || null, email: form.email || null, user_id: form.user_id || null }).eq('id', userId)
         form.user_id = userId
       }
     }
@@ -315,32 +238,8 @@ export function AddMerchant() {
       is_active: form.is_active === 'true',
     }
     if (editId) {
-      {
-        // Always require OTP for any edit save
-        pendingPayload.current = payload
-        // 'email' = 2-step email OTP; 'other' = 1-step admin email OTP
-        const mode: 'email' | 'other' = emailChanged ? 'email' : 'other'
-        setOtpMode(mode)
-        setShowOtp(true); setOtpStep(1); setOtp1(''); setOtp2(''); setOtpError('')
-        setOtpLoading(true)
-        // Fetch merchant's ACTUAL auth email (profiles table may be stale)
-        let sendTo = originalEmail
-        if (merchantAuthId) {
-          const sk = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-          const supaUrl = import.meta.env.VITE_SUPABASE_URL
-          const authRes = await fetch(`${supaUrl}/auth/v1/admin/users/${merchantAuthId}`, {
-            headers: { apikey: sk, Authorization: `Bearer ${sk}` }
-          })
-          const authUser = await authRes.json()
-          if (authUser?.email) sendTo = authUser.email
-        }
-        setOtpEmail(sendTo)
-        const { error: otpErr } = await supabaseOtp.auth.signInWithOtp({ email: sendTo })
-        setOtpLoading(false)
-        if (otpErr) { setOtpError(otpErr.message); return }
-        startTimer(setResend1, timer1)
-        return
-      }
+      await performEditSave(payload)
+      return
     } else {
       payload.user_id = form.user_id || null
       const { error: merchantError } = await supabase.from('merchants').insert(payload)
@@ -366,7 +265,10 @@ export function AddMerchant() {
             <tbody>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Merchant Name: <span className="text-red-500">*</span></td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.store_name} onChange={(e) => setForm({ ...form, store_name: e.target.value })} required /></td>
+                <td className="py-2">
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.store_name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} value={form.store_name} onChange={(e) => { setForm({ ...form, store_name: e.target.value }); if (fieldErrors.store_name) setFieldErrors(prev => ({ ...prev, store_name: '' })) }} onBlur={(e) => handleFieldBlur('store_name', e.target.value)} required />
+                  {fieldErrors.store_name && <p className="mt-1 text-xs text-red-600">{fieldErrors.store_name}</p>}
+                </td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Date of Registration:</td>
@@ -377,8 +279,7 @@ export function AddMerchant() {
                 <td className="py-2">
                   <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type="text" value={form.email} onChange={(e) => {
                     const email = e.target.value
-                    const prefix = email.split('@')[0]
-                    setForm(f => ({ ...f, email, ...(!userIdEdited && !editId ? { user_id: prefix } : {}) }))
+                    setForm(f => ({ ...f, email }))
                     if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: validateField('email', email) }))
                   }} onBlur={(e) => handleFieldBlur('email', e.target.value)} required={!editId} />
                   {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
@@ -388,7 +289,7 @@ export function AddMerchant() {
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Password: <span className="text-red-500">*</span></td>
                 <td className="py-2">
                   <div className="relative">
-                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} required={!editId} />
+                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type={showPassword ? 'text' : 'password'} value={form.password} placeholder={editId ? 'Leave blank to keep current' : ''} onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} required={!editId} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -406,7 +307,7 @@ export function AddMerchant() {
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">User ID: <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.user_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} value={form.user_id} onChange={(e) => { setUserIdEdited(true); setForm({ ...form, user_id: e.target.value }); if (fieldErrors.user_id) setFieldErrors(prev => ({ ...prev, user_id: '' })) }} onBlur={(e) => handleFieldBlur('user_id', e.target.value)} required />
+                  <input className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none ${editId ? 'bg-gray-50 cursor-not-allowed' : fieldErrors.user_id ? 'border-red-500' : 'focus:border-red-500'}`} value={form.user_id} onChange={(e) => { if (editId) return; setForm({ ...form, user_id: e.target.value }); if (fieldErrors.user_id) setFieldErrors(prev => ({ ...prev, user_id: '' })) }} onBlur={(e) => { if (!editId) handleFieldBlur('user_id', e.target.value) }} readOnly={!!editId} required />
                   {fieldErrors.user_id && <p className="mt-1 text-xs text-red-600">{fieldErrors.user_id}</p>}
                 </td>
               </tr>
@@ -498,69 +399,6 @@ export function AddMerchant() {
         </form>
       </div>
 
-      {/* OTP Popup */}
-      {showOtp && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={(e) => { if (e.target === e.currentTarget) closeOtp() }}
-        >
-          <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 460, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
-            <div style={{ background: '#bf282d', padding: '12px 20px' }}>
-              <p style={{ color: '#fff', fontWeight: 600, fontSize: 14, margin: 0 }}>
-                {otpMode === 'other' ? 'Confirm Changes via Email OTP' : 'Verify to Save Changes'}
-              </p>
-            </div>
-            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-              {/* Step 1 */}
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, background: '#f9fafb', padding: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#bf282d', marginBottom: 4 }}>
-                  {otpMode === 'other' ? 'Step 1 of 1' : 'Step 1 of 2'} — Verify via Email OTP
-                </p>
-                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
-                  <>OTP sent to merchant's email: <strong>{otpEmail || originalEmail}</strong></>
-                </p>
-                {otpStep === 1 && (otpLoading && resend1 === 0
-                  ? <p style={{ fontSize: 12, color: '#6b7280' }}>Sending OTP…</p>
-                  : <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <input style={{ width: 120, borderRadius: 4, border: '1px solid #d1d5db', padding: '6px 8px', fontSize: 13, letterSpacing: 4 }} type="text" maxLength={6} value={otp1} onChange={(e) => setOtp1(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} placeholder="6-digit OTP" autoFocus />
-                      <Button type="button" disabled={otpLoading} onClick={verifyOtp1}>{otpLoading ? 'Verifying…' : 'Verify OTP'}</Button>
-                      {resend1 > 0
-                        ? <span style={{ fontSize: 12, color: '#9ca3af' }}>Resend in {resend1}s</span>
-                        : <button type="button" onClick={async () => { setOtpLoading(true); await supabaseOtp.auth.signInWithOtp({ email: otpEmail || originalEmail }); setOtpLoading(false); startTimer(setResend1, timer1) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
-                      }
-                    </div>
-                )}
-                {otpStep === 2 && <p style={{ fontSize: 12, color: '#16a34a', fontWeight: 500 }}>✓ Verified!</p>}
-              </div>
-
-              {/* Step 2 — hidden for 'other' mode */}
-              {otpMode !== 'other' && <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, background: otpStep === 2 ? '#f9fafb' : '#f3f4f6', padding: 16, opacity: otpStep === 2 ? 1 : 0.45, pointerEvents: otpStep === 2 ? 'auto' : 'none' }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#bf282d', marginBottom: 4 }}>Step 2 of 2 — {otpMode === 'email' ? 'Verify New Email' : 'Verify New Phone'}</p>
-                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
-                    {otpMode === 'email'
-                      ? <>OTP to new email: <strong>{form.email}</strong></>
-                      : <>OTP sent to the new phone being set: <strong>{form.phone}</strong></>}
-                  </p>
-                  {otpStep === 2 && otpLoading && resend2 === 0
-                    ? <p style={{ fontSize: 12, color: '#6b7280' }}>Sending OTP…</p>
-                    : <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <input style={{ width: 120, borderRadius: 4, border: '1px solid #d1d5db', padding: '6px 8px', fontSize: 13, letterSpacing: 4 }} type="text" maxLength={6} value={otp2} onChange={(e) => setOtp2(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} placeholder="6-digit OTP" />
-                        <Button type="button" disabled={otpLoading || otpStep !== 2} onClick={verifyOtp2}>{otpLoading ? 'Verifying…' : 'Verify & Save'}</Button>
-                        {otpStep === 2 && (resend2 > 0
-                          ? <span style={{ fontSize: 12, color: '#9ca3af' }}>Resend in {resend2}s</span>
-                          : <button type="button" onClick={async () => { setOtpLoading(true); await supabaseOtp.auth.signInWithOtp({ email: form.email }); setOtpLoading(false); startTimer(setResend2, timer2) }} style={{ fontSize: 12, color: '#bf282d', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Resend OTP</button>
-                        )}
-                      </div>
-                  }
-              </div>}
-
-              {otpError && <p style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>{otpError}</p>}
-              <div><Button type="button" variant="secondary" onClick={closeOtp}>Cancel</Button></div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
