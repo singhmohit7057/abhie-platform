@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase as defaultClient } from '../lib/supabase'
 import type { Profile, UserRole } from '../types'
-import type { User, Session } from '@supabase/supabase-js'
+import type { User, Session, SupabaseClient } from '@supabase/supabase-js'
 
 interface AuthState {
   user: User | null
@@ -10,7 +10,8 @@ interface AuthState {
   loading: boolean
 }
 
-export function useAuth() {
+export function useAuth(client: SupabaseClient = defaultClient) {
+  const supabase = client
   const [state, setState] = useState<AuthState>({
     user: null,
     profile: null,

@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { supabaseMerchant } from '../lib/supabase'
 import type { UserRole } from '../types'
 
 interface AuthGuardProps {
@@ -8,7 +9,8 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
-  const { user, profile, loading } = useAuth()
+  const client = requiredRole === 'merchant' ? supabaseMerchant : undefined
+  const { user, profile, loading } = useAuth(client)
 
   if (loading) {
     return (
@@ -23,8 +25,9 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     return <Navigate to={loginPath} replace />
   }
 
-  if (requiredRole && profile?.role !== requiredRole && profile?.role !== 'admin') {
-    return <Navigate to="/unauthorized" replace />
+  if (requiredRole && profile?.role !== requiredRole) {
+    const loginPath = requiredRole === 'merchant' ? '/merchant/login' : '/unauthorized'
+    return <Navigate to={loginPath} replace />
   }
 
   return <>{children}</>

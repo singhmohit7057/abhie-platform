@@ -1,9 +1,10 @@
 import { Outlet, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { supabaseMerchant } from '../../lib/supabase'
 import { LogOut } from 'lucide-react'
 
 export function MerchantLayout() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut } = useAuth(supabaseMerchant)
   const navigate = useNavigate()
 
   const handleLogout = async () => {

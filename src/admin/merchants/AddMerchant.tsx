@@ -48,10 +48,10 @@ export function AddMerchant() {
     }
     if (name === 'password' && !editId) {
       if (!value) return 'Password is mandatory.'
-      if (value.length < 6) return 'Minimum password length should be 6.'
+      if (value.length < 3) return 'Minimum password length should be 3.'
     }
     if (name === 'password' && editId) {
-      if (value && value.length < 6) return 'Minimum password length should be 6.'
+      if (value && value.length < 3) return 'Minimum password length should be 3.'
     }
     if (name === 'user_id' && !value) return 'User Id is mandatory.'
     if (name === 'business_type' && !value) return 'Category is mandatory.'

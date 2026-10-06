@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseMerchant } from '../lib/supabase'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -20,7 +20,8 @@ export function Login({ variant = 'store' }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
 
-  const { signInWithEmail, signInWithOtp, verifyOtp } = useAuth()
+  const authClient = variant === 'merchant' ? supabaseMerchant : supabase
+  const { signInWithEmail, signInWithOtp, verifyOtp } = useAuth(authClient)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const defaultRedirect = variant === 'admin' ? '/admin' : variant === 'merchant' ? '/merchant' : '/'

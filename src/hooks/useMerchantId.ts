@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import { useCRUD } from './useCRUD'
+import { supabaseMerchant } from '../lib/supabase'
 import type { Merchant } from '../types'
 
 export function useMerchantId() {
-  const { user, profile } = useAuth()
+  const { user, profile } = useAuth(supabaseMerchant)
   const { data: merchants } = useCRUD<Merchant>({ table: 'merchants' })
   const [searchParams] = useSearchParams()
   const asParam = searchParams.get('as')
