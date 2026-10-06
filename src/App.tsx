@@ -137,7 +137,7 @@ export default function App() {
           <Route path="reports" element={<MerchantReports />} />
           <Route path="feedback" element={<MerchantFeedback />} />
           <Route path="accounts/password" element={<MerchantChangePassword />} />
-          <Route path="accounts/edit" element={<EditAccount />} />
+          <Route path="accounts/edit" element={<EditAccount variant="merchant" />} />
         </Route>
 
         {/* Store Routes (public) */}
