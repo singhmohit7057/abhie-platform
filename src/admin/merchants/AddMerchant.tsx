@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { adminCreateUser, adminUpdateUser, adminDeleteUser, adminFindUserByEmail } from '../../lib/merchantAdmin'
 import { useCRUD } from '../../hooks/useCRUD'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
@@ -36,18 +37,24 @@ export function AddMerchant() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   function validateField(name: string, value: string) {
+    if (name === 'store_name' && !value) return 'Name is mandatory.'
     if (name === 'email') {
-      if (!value) return 'Email is required.'
+      if (!value) return 'Email is mandatory.'
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Enter a valid email address.'
     }
     if (name === 'phone') {
-      if (!value) return 'Phone is required.'
+      if (!value) return 'Phone number is mandatory.'
       if (!/^\d{10}$/.test(value)) return 'Enter a valid phone number.'
     }
-    if (name === 'password') {
-      if (value && value.length < 3) return 'Minimum password length should be 3.'
+    if (name === 'password' && !editId) {
+      if (!value) return 'Password is mandatory.'
+      if (value.length < 6) return 'Minimum password length should be 6.'
     }
-    if (name === 'business_type' && !value) return 'Category is required.'
+    if (name === 'password' && editId) {
+      if (value && value.length < 6) return 'Minimum password length should be 6.'
+    }
+    if (name === 'user_id' && !value) return 'User Id is mandatory.'
+    if (name === 'business_type' && !value) return 'Category is mandatory.'
     return ''
   }
 
@@ -57,8 +64,8 @@ export function AddMerchant() {
 
     // Check for duplicates in DB (skip if same as current in edit mode)
     if (name === 'email' && value) {
-      const { data } = await supabase.from('profiles').select('id').eq('email', value).maybeSingle()
-      if (data?.id && data.id !== merchantAuthId) {
+      const { data } = await supabase.from('profiles').select('id, role').eq('email', value).maybeSingle()
+      if (data?.id && data.id !== merchantAuthId && data.role === 'merchant') {
         setFieldErrors(prev => ({ ...prev, email: 'Email is already registered.' })); return
       }
     }
@@ -119,33 +126,14 @@ export function AddMerchant() {
         phone: form.phone || null, user_id: form.user_id || null,
         full_name: form.store_name, email: form.email || null,
       }).eq('id', merchantAuthId)
-      const sk = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-      const url = import.meta.env.VITE_SUPABASE_URL
-      if (form.email) {
-        await fetch(`${url}/auth/v1/admin/users/${merchantAuthId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'apikey': sk, 'Authorization': `Bearer ${sk}` },
-          body: JSON.stringify({ email: form.email, email_confirm: true }),
-        })
-      }
-      if (form.password) {
-        await fetch(`${url}/auth/v1/admin/users/${merchantAuthId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'apikey': sk, 'Authorization': `Bearer ${sk}` },
-          body: JSON.stringify({ password: form.password }),
-        })
-      }
+      if (form.email) await adminUpdateUser(merchantAuthId, { email: form.email })
+      if (form.password) await adminUpdateUser(merchantAuthId, { password: form.password })
     }
     // Cleanup: delete orphaned auth user with old email (if email was changed)
     if (merchantAuthId && originalEmail && form.email && originalEmail !== form.email) {
-      const sk = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-      const url = import.meta.env.VITE_SUPABASE_URL
       const { data: oldUser } = await supabase.from('profiles').select('id').eq('email', originalEmail).maybeSingle()
       if (oldUser?.id && oldUser.id !== merchantAuthId) {
-        await fetch(`${url}/auth/v1/admin/users/${oldUser.id}`, {
-          method: 'DELETE',
-          headers: { 'apikey': sk, 'Authorization': `Bearer ${sk}` },
-        })
+        await adminDeleteUser(oldUser.id)
         await supabase.from('profiles').delete().eq('id', oldUser.id)
       }
     }
@@ -155,26 +143,32 @@ export function AddMerchant() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
-    // Validate all fields before submit
+    // Validate all required fields before submit
     const errors: Record<string, string> = {}
-    const emailErr = validateField('email', form.email)
-    const phoneErr = validateField('phone', form.phone)
-    const categoryErr = validateField('business_type', form.business_type)
-    if (emailErr) errors.email = emailErr
-    if (phoneErr) errors.phone = phoneErr
-    if (categoryErr) errors.business_type = categoryErr
+    const checks = [
+      ['store_name', form.store_name],
+      ['email', form.email],
+      ['phone', form.phone],
+      ['password', form.password],
+      ['user_id', form.user_id],
+      ['business_type', form.business_type],
+    ] as [string, string][]
+    checks.forEach(([name, val]) => {
+      const err = validateField(name, val)
+      if (err) errors[name] = err
+    })
     if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
     // Check duplicates on submit
     if (!editId) {
       const [nameCheck, emailCheck, phoneCheck, userIdCheck] = await Promise.all([
         supabase.from('merchants').select('id').ilike('store_name', form.store_name).maybeSingle(),
-        supabase.from('profiles').select('id').eq('email', form.email).maybeSingle(),
+        supabase.from('profiles').select('id, role').eq('email', form.email).maybeSingle(),
         supabase.from('profiles').select('id').eq('phone', form.phone).maybeSingle(),
         form.user_id ? supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle() : Promise.resolve({ data: null }),
       ])
       const dupErrors: Record<string, string> = {}
       if (nameCheck.data?.id) dupErrors.store_name = 'Duplicate Merchant.'
-      if (emailCheck.data?.id) dupErrors.email = 'Email is already registered.'
+      if (emailCheck.data?.id && emailCheck.data.role === 'merchant') dupErrors.email = 'Email is already registered.'
       if (phoneCheck.data?.id) dupErrors.phone = 'Phone Number is already registered.'
       if (userIdCheck.data?.id) dupErrors.user_id = 'User Id is not available.'
       if (Object.keys(dupErrors).length > 0) { setFieldErrors(dupErrors); return }
@@ -182,33 +176,24 @@ export function AddMerchant() {
     setFieldErrors({})
 
     if (!editId && form.email && form.password) {
-      const serviceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          email_confirm: true,
-          user_metadata: { full_name: form.store_name, role: 'merchant' },
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) {
+      const json = await adminCreateUser(form.email, form.password, form.store_name)
+      if (!json.id) {
         const msg: string = json.message || json.msg || ''
-        if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists') || res.status === 422) {
-          const { data: existing } = await supabase.from('profiles').select('id').eq('email', form.email).maybeSingle()
-          if (existing?.id) {
-            form.user_id = existing.id
-          } else {
-            setFormError('This email is already registered.')
-            return
+        if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists')) {
+          // Check merchant profile first
+          const { data: existingProfile } = await supabase.from('profiles').select('id, role').eq('email', form.email).maybeSingle()
+          if (existingProfile?.id && existingProfile.role === 'merchant') {
+            setFormError('Email is already registered to another merchant.'); return
           }
+          const orphan = await adminFindUserByEmail(form.email)
+          if (orphan?.id) {
+            await adminDeleteUser(orphan.id)
+            await supabase.from('profiles').delete().eq('id', orphan.id)
+          }
+          // Retry
+          const retryJson = await adminCreateUser(form.email, form.password, form.store_name)
+          if (!retryJson.id) { setFormError(retryJson.message || 'Failed to create account.'); return }
+          form.user_id = retryJson.id
         } else {
           setFormError(msg || 'Failed to create account')
           return
@@ -260,7 +245,7 @@ export function AddMerchant() {
       <h1 className="mb-6 text-xl font-bold text-red-700">Add/Edit Merchant</h1>
 
       <div className="rounded-lg border bg-white p-6">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate autoComplete="off">
           <table className="w-full max-w-xl text-sm">
             <tbody>
               <tr className="border-b border-gray-100">
@@ -289,7 +274,7 @@ export function AddMerchant() {
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Password: <span className="text-red-500">*</span></td>
                 <td className="py-2">
                   <div className="relative">
-                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type={showPassword ? 'text' : 'password'} value={form.password} placeholder={editId ? 'Leave blank to keep current' : ''} onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} required={!editId} />
+                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type={showPassword ? 'text' : 'password'} value={form.password} placeholder={editId ? 'Leave blank to keep current' : ''} autoComplete="new-password" onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} required={!editId} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
