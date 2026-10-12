@@ -78,7 +78,7 @@ export function AddMerchant() {
     if (name === 'store_name' && value) {
       const { data } = await supabase.from('merchants').select('id').ilike('store_name', value).maybeSingle()
       if (data?.id && data.id !== editId) {
-        setFieldErrors(prev => ({ ...prev, store_name: 'Duplicate Merchant.' })); return
+        setFieldErrors(prev => ({ ...prev, store_name: 'Merchant name already exists.' })); return
       }
     }
     if (name === 'user_id' && value) {
@@ -92,6 +92,17 @@ export function AddMerchant() {
   const [merchantAuthId, setMerchantAuthId] = useState('')
   const formInitialized = useRef(false)
   const [originalEmail, setOriginalEmail] = useState('')
+
+  // Reset form when switching from edit to add mode
+  useEffect(() => {
+    if (!editId) {
+      formInitialized.current = false
+      setForm({ store_name: '', email: '', password: '', phone: '', user_id: '', address: '', city: '', state: '', pincode: '', gst_number: '', business_type: '', commission_rate: '0', is_active: 'true' })
+      setMerchantAuthId('')
+      setOriginalEmail('')
+      setFieldErrors({})
+    }
+  }, [editId])
 
   useEffect(() => {
     if (editId && merchantsData.length > 0) {
@@ -167,7 +178,7 @@ export function AddMerchant() {
         form.user_id ? supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle() : Promise.resolve({ data: null }),
       ])
       const dupErrors: Record<string, string> = {}
-      if (nameCheck.data?.id) dupErrors.store_name = 'Duplicate Merchant.'
+      if (nameCheck.data?.id) dupErrors.store_name = 'Merchant name already exists.'
       if (emailCheck.data?.id && emailCheck.data.role === 'merchant') dupErrors.email = 'Email is already registered.'
       if (phoneCheck.data?.id) dupErrors.phone = 'Phone Number is already registered.'
       if (userIdCheck.data?.id) dupErrors.user_id = 'User Id is not available.'
@@ -223,6 +234,14 @@ export function AddMerchant() {
       is_active: form.is_active === 'true',
     }
     if (editId) {
+      // Prevent setting merchant active if their category is inactive
+      if (form.is_active === 'true' && form.business_type) {
+        const cat = categories.find(c => c.name === form.business_type)
+        if (cat && !cat.is_active) {
+          setFormError(`This reseller's category "${form.business_type}" is currently inactive. You must select an active category to save.`)
+          return
+        }
+      }
       await performEditSave(payload)
       return
     } else {
@@ -242,7 +261,7 @@ export function AddMerchant() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-red-700">Add/Edit Merchant</h1>
+      <h1 className="mb-6 text-xl font-bold text-red-700">{editId ? 'Edit Merchant' : 'Add Merchant'}</h1>
 
       <div className="rounded-lg border bg-white p-6">
         <form onSubmit={handleSubmit} noValidate autoComplete="off">
