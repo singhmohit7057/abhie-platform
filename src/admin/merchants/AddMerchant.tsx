@@ -169,19 +169,22 @@ export function AddMerchant() {
       if (err) errors[name] = err
     })
     if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
-    // Check duplicates on submit
-    if (!editId) {
-      const [nameCheck, emailCheck, phoneCheck, userIdCheck] = await Promise.all([
+    // Check duplicates on submit (for both add and edit, excluding current merchant)
+    {
+      const [nameCheck, emailCheck, phoneCheck] = await Promise.all([
         supabase.from('merchants').select('id').ilike('store_name', form.store_name).maybeSingle(),
         supabase.from('profiles').select('id, role').eq('email', form.email).maybeSingle(),
         supabase.from('profiles').select('id').eq('phone', form.phone).maybeSingle(),
-        form.user_id ? supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle() : Promise.resolve({ data: null }),
       ])
       const dupErrors: Record<string, string> = {}
-      if (nameCheck.data?.id) dupErrors.store_name = 'Merchant name already exists.'
-      if (emailCheck.data?.id && emailCheck.data.role === 'merchant') dupErrors.email = 'Email is already registered.'
-      if (phoneCheck.data?.id) dupErrors.phone = 'Phone Number is already registered.'
-      if (userIdCheck.data?.id) dupErrors.user_id = 'User Id is not available.'
+      if (nameCheck.data?.id && nameCheck.data.id !== editId) dupErrors.store_name = 'Merchant name already exists.'
+      if (emailCheck.data?.id && emailCheck.data.role === 'merchant' && emailCheck.data.id !== merchantAuthId) dupErrors.email = 'Email is already registered.'
+      if (phoneCheck.data?.id && phoneCheck.data.id !== merchantAuthId) dupErrors.phone = 'Phone Number is already registered.'
+      // user_id check only on new merchant (read-only in edit)
+      if (!editId && form.user_id) {
+        const { data: userIdCheck } = await supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle()
+        if (userIdCheck?.id) dupErrors.user_id = 'User Id is not available.'
+      }
       if (Object.keys(dupErrors).length > 0) { setFieldErrors(dupErrors); return }
     }
     setFieldErrors({})
