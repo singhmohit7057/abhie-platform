@@ -64,7 +64,7 @@ export function AddMerchant() {
 
     // Check for duplicates in DB (skip if same as current in edit mode)
     if (name === 'email' && value) {
-      const { data } = await supabase.from('profiles').select('id, role').eq('email', value).maybeSingle()
+      const { data } = await supabase.from('profiles').select('id, role').ilike('email', value).maybeSingle()
       if (data?.id && data.id !== merchantAuthId && data.role === 'merchant') {
         setFieldErrors(prev => ({ ...prev, email: 'Email is already registered.' })); return
       }
@@ -82,7 +82,7 @@ export function AddMerchant() {
       }
     }
     if (name === 'user_id' && value) {
-      const { data } = await supabase.from('profiles').select('id').eq('user_id', value).maybeSingle()
+      const { data } = await supabase.from('profiles').select('id').ilike('user_id', value).maybeSingle()
       if (data?.id && data.id !== merchantAuthId) {
         setFieldErrors(prev => ({ ...prev, user_id: 'User Id is not available.' })); return
       }
@@ -173,7 +173,7 @@ export function AddMerchant() {
     {
       const [nameCheck, emailCheck, phoneCheck] = await Promise.all([
         supabase.from('merchants').select('id').ilike('store_name', form.store_name).maybeSingle(),
-        supabase.from('profiles').select('id, role').eq('email', form.email).maybeSingle(),
+        supabase.from('profiles').select('id, role').ilike('email', form.email).maybeSingle(),
         supabase.from('profiles').select('id').eq('phone', form.phone).maybeSingle(),
       ])
       const dupErrors: Record<string, string> = {}
@@ -182,7 +182,7 @@ export function AddMerchant() {
       if (phoneCheck.data?.id && phoneCheck.data.id !== merchantAuthId) dupErrors.phone = 'Phone Number is already registered.'
       // user_id check only on new merchant (read-only in edit)
       if (!editId && form.user_id) {
-        const { data: userIdCheck } = await supabase.from('profiles').select('id').eq('user_id', form.user_id).maybeSingle()
+        const { data: userIdCheck } = await supabase.from('profiles').select('id').ilike('user_id', form.user_id).maybeSingle()
         if (userIdCheck?.id) dupErrors.user_id = 'User Id is not available.'
       }
       if (Object.keys(dupErrors).length > 0) { setFieldErrors(dupErrors); return }
@@ -285,7 +285,7 @@ export function AddMerchant() {
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Email: <span className="text-red-500">*</span></td>
                 <td className="py-2">
                   <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type="text" value={form.email} onChange={(e) => {
-                    const email = e.target.value
+                    const email = e.target.value.toLowerCase()
                     setForm(f => ({ ...f, email }))
                     if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: validateField('email', email) }))
                   }} onBlur={(e) => handleFieldBlur('email', e.target.value)} required={!editId} />
@@ -314,7 +314,7 @@ export function AddMerchant() {
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">User ID: <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <input className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none ${editId ? 'bg-gray-50 cursor-not-allowed' : fieldErrors.user_id ? 'border-red-500' : 'focus:border-red-500'}`} value={form.user_id} onChange={(e) => { if (editId) return; setForm({ ...form, user_id: e.target.value }); if (fieldErrors.user_id) setFieldErrors(prev => ({ ...prev, user_id: '' })) }} onBlur={(e) => { if (!editId) handleFieldBlur('user_id', e.target.value) }} readOnly={!!editId} required />
+                  <input className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none ${editId ? 'bg-gray-50 cursor-not-allowed' : fieldErrors.user_id ? 'border-red-500' : 'focus:border-red-500'}`} value={form.user_id} onChange={(e) => { if (editId) return; setForm({ ...form, user_id: e.target.value.toLowerCase() }); if (fieldErrors.user_id) setFieldErrors(prev => ({ ...prev, user_id: '' })) }} onBlur={(e) => { if (!editId) handleFieldBlur('user_id', e.target.value) }} readOnly={!!editId} required />
                   {fieldErrors.user_id && <p className="mt-1 text-xs text-red-600">{fieldErrors.user_id}</p>}
                 </td>
               </tr>
