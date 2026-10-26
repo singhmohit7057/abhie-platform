@@ -34,13 +34,14 @@ export function AddMerchant() {
   const [form, setForm] = useState(getEditData())
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState('')
+  const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   function validateField(name: string, value: string) {
     if (name === 'store_name' && !value) return 'Name is mandatory.'
     if (name === 'email') {
       if (!value) return 'Email is mandatory.'
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Enter a valid email address.'
+      if (!/^[^\s@]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}$/.test(value)) return 'Enter a valid email address.'
     }
     if (name === 'phone') {
       if (!value) return 'Phone number is mandatory.'
@@ -92,6 +93,7 @@ export function AddMerchant() {
   const [merchantAuthId, setMerchantAuthId] = useState('')
   const formInitialized = useRef(false)
   const [originalEmail, setOriginalEmail] = useState('')
+  const originalForm = useRef<typeof form | null>(null)
 
   // Reset form when switching from edit to add mode
   useEffect(() => {
@@ -118,13 +120,14 @@ export function AddMerchant() {
         const phone = profile?.phone || ''
         setOriginalEmail(email)
         // setOriginalPhone removed
-        setForm(prev => ({
-          ...prev,
+        const editFormData = {
           store_name: m.store_name, user_id: (profile as any)?.user_id || '',
-          email, phone,
+          email, phone, password: '',
           address: m.address || '', city: m.city || '', state: m.state || '', pincode: m.pincode || '',
           gst_number: m.gst_number || '', business_type: m.business_type || '', commission_rate: String(m.commission_rate), is_active: String(m.is_active),
-        }))
+        }
+        setForm(prev => ({ ...prev, ...editFormData }))
+        originalForm.current = editFormData
       }
     }
   }, [editId, merchantsData, profiles])
@@ -154,6 +157,11 @@ export function AddMerchant() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    setSaving(true)
+    try { await handleSubmitInner() } finally { setSaving(false) }
+  }
+
+  const handleSubmitInner = async () => {
     // Validate all required fields before submit
     const errors: Record<string, string> = {}
     const checks = [
@@ -262,9 +270,28 @@ export function AddMerchant() {
     navigate('/admin/merchants')
   }
 
+  // Field lock logic — based on SAVED values (originalForm), not current form edits
+  // Fields only unlock after saving the status/category change
+  const savedIsActive = originalForm.current?.is_active ?? form.is_active
+  const savedBusinessType = originalForm.current?.business_type ?? form.business_type
+  const savedCatObj = categories.find(c => c.name === savedBusinessType)
+  const merchantIsInactive = !!editId && savedIsActive === 'false'
+  const catIsInactive = merchantIsInactive && savedCatObj && !savedCatObj.is_active
+  const fieldLocked = (field: string) => {
+    if (!merchantIsInactive) return false
+    if (catIsInactive) return !['business_type', 'is_active'].includes(field)
+    return field !== 'is_active'
+  }
+  const lockMsg = merchantIsInactive
+    ? catIsInactive
+      ? `This reseller's category "${savedBusinessType}" is inactive. Update the category and status, then save to edit other details.`
+      : 'This reseller is currently inactive. Update the status and save to edit other details.'
+    : ''
+
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-red-700">{editId ? 'Edit Merchant' : 'Add Merchant'}</h1>
+      {lockMsg && <div className="mb-4 rounded border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">{lockMsg}</div>}
 
       <div className="rounded-lg border bg-white p-6">
         <form onSubmit={handleSubmit} noValidate autoComplete="off">
@@ -273,7 +300,7 @@ export function AddMerchant() {
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Merchant Name: <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.store_name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} value={form.store_name} onChange={(e) => { setForm({ ...form, store_name: e.target.value }); if (fieldErrors.store_name) setFieldErrors(prev => ({ ...prev, store_name: '' })) }} onBlur={(e) => handleFieldBlur('store_name', e.target.value)} required />
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.store_name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'} ${fieldLocked('store_name') ? 'bg-gray-50 cursor-not-allowed' : ''}`} value={form.store_name} onChange={(e) => { setForm({ ...form, store_name: e.target.value }); if (fieldErrors.store_name) setFieldErrors(prev => ({ ...prev, store_name: '' })) }} onBlur={(e) => handleFieldBlur('store_name', e.target.value)} disabled={fieldLocked('store_name')} required />
                   {fieldErrors.store_name && <p className="mt-1 text-xs text-red-600">{fieldErrors.store_name}</p>}
                 </td>
               </tr>
@@ -284,11 +311,11 @@ export function AddMerchant() {
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Email: <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type="text" value={form.email} onChange={(e) => {
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'} ${fieldLocked('email') ? 'bg-gray-50 cursor-not-allowed' : ''}`} type="text" value={form.email} onChange={(e) => {
                     const email = e.target.value.toLowerCase()
                     setForm(f => ({ ...f, email }))
                     if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: validateField('email', email) }))
-                  }} onBlur={(e) => handleFieldBlur('email', e.target.value)} required={!editId} />
+                  }} onBlur={(e) => handleFieldBlur('email', e.target.value)} disabled={fieldLocked('email')} required={!editId} />
                   {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
                 </td>
               </tr>
@@ -296,7 +323,7 @@ export function AddMerchant() {
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Password: <span className="text-red-500">*</span></td>
                 <td className="py-2">
                   <div className="relative">
-                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type={showPassword ? 'text' : 'password'} value={form.password} placeholder={editId ? 'Leave blank to keep current' : ''} autoComplete="new-password" onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} required={!editId} />
+                    <input className={`w-full rounded border px-2 py-1.5 pr-9 text-sm focus:outline-none ${fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'} ${fieldLocked('password') ? 'bg-gray-50 cursor-not-allowed' : ''}`} type={showPassword ? 'text' : 'password'} value={form.password} placeholder={editId ? 'Leave blank to keep current' : ''} autoComplete="new-password" onChange={(e) => { setForm({ ...form, password: e.target.value }); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: validateField('password', e.target.value) })) }} onBlur={(e) => { const err = validateField('password', e.target.value); setFieldErrors(prev => ({ ...prev, password: err })) }} disabled={fieldLocked('password')} required={!editId} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -307,7 +334,7 @@ export function AddMerchant() {
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Phone (Mobile): <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'}`} type="tel" maxLength={10} value={form.phone} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 10); setForm({ ...form, phone: v }); if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: validateField('phone', v) })) }} onBlur={(e) => handleFieldBlur('phone', e.target.value)} required />
+                  <input className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-red-500'} ${fieldLocked('phone') ? 'bg-gray-50 cursor-not-allowed' : ''}`} type="tel" maxLength={10} value={form.phone} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 10); setForm({ ...form, phone: v }); if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: validateField('phone', v) })) }} onBlur={(e) => handleFieldBlur('phone', e.target.value)} disabled={fieldLocked('phone')} required />
                   {fieldErrors.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>}
                 </td>
               </tr>
@@ -320,16 +347,16 @@ export function AddMerchant() {
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Address:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></td>
+                <td className="py-2"><input className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none ${fieldLocked('address') ? 'bg-gray-50 cursor-not-allowed' : ''}`} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} disabled={fieldLocked('address')} /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">City:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></td>
+                <td className="py-2"><input className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none ${fieldLocked('city') ? 'bg-gray-50 cursor-not-allowed' : ''}`} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} disabled={fieldLocked('city')} /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">State:</td>
                 <td className="py-2">
-                  <select className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}>
+                  <select className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none ${fieldLocked('state') ? 'bg-gray-50 cursor-not-allowed' : ''}`} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} disabled={fieldLocked('state')}>
                     <option value="">--- Select ---</option>
                     <option value="Andhra Pradesh">Andhra Pradesh</option>
                     <option value="Arunachal Pradesh">Arunachal Pradesh</option>
@@ -371,12 +398,12 @@ export function AddMerchant() {
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">PIN:</td>
-                <td className="py-2"><input className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></td>
+                <td className="py-2"><input className={`w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none ${fieldLocked('pincode') ? 'bg-gray-50 cursor-not-allowed' : ''}`} value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} disabled={fieldLocked('pincode')} /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 pr-4 font-medium text-gray-700 whitespace-nowrap">Category: <span className="text-red-500">*</span></td>
                 <td className="py-2">
-                  <select className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.business_type ? 'border-red-500' : 'border-gray-300 focus:border-gray-900'}`} value={form.business_type} onChange={(e) => { setForm({ ...form, business_type: e.target.value }); if (fieldErrors.business_type) setFieldErrors(prev => ({ ...prev, business_type: validateField('business_type', e.target.value) })) }} onBlur={(e) => handleFieldBlur('business_type', e.target.value)} required>
+                  <select className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none ${fieldErrors.business_type ? 'border-red-500' : 'border-gray-300 focus:border-gray-900'} ${fieldLocked('business_type') ? 'bg-gray-50 cursor-not-allowed' : ''}`} value={form.business_type} onChange={(e) => { setForm({ ...form, business_type: e.target.value }); if (fieldErrors.business_type) setFieldErrors(prev => ({ ...prev, business_type: validateField('business_type', e.target.value) })) }} onBlur={(e) => handleFieldBlur('business_type', e.target.value)} disabled={fieldLocked('business_type')} required>
                     <option value="">--- Select ---</option>
                     <option value="All">All Categories</option>
                     {categories.filter(c => c.is_active).map(c => (
@@ -400,7 +427,7 @@ export function AddMerchant() {
 
           {formError && <p className="mt-3 text-center text-sm font-bold text-red-600">{formError}</p>}
           <div className="mt-5 flex gap-2">
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={saving || (!!editId && originalForm.current !== null && (Object.keys(form) as (keyof typeof form)[]).every(k => form[k] === originalForm.current![k]))}>{saving ? 'Saving...' : 'Save'}</Button>
             <Button variant="secondary" type="button" onClick={() => navigate('/admin/merchants')}>Cancel</Button>
           </div>
         </form>
