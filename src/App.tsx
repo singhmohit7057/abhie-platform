@@ -43,6 +43,7 @@ import { ManageRedemption } from './merchant/redemption/ManageRedemption'
 import { MerchantReports } from './merchant/reports/MerchantReports'
 import { MerchantFeedback } from './merchant/feedback/MerchantFeedback'
 import { MerchantChangePassword } from './merchant/accounts/ChangePassword'
+import { MerchantViewAccount } from './merchant/accounts/ViewAccount'
 import { StoreLayout } from './components/layout/StoreLayout'
 import { StoreHome } from './store/Home'
 import { Catalog } from './store/Catalog'
@@ -137,6 +138,7 @@ export default function App() {
           <Route path="reports" element={<MerchantReports />} />
           <Route path="feedback" element={<MerchantFeedback />} />
           <Route path="accounts/password" element={<MerchantChangePassword />} />
+          <Route path="accounts/view" element={<MerchantViewAccount />} />
           <Route path="accounts/edit" element={<EditAccount variant="merchant" />} />
         </Route>
 

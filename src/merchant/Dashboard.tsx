@@ -5,7 +5,7 @@ const modules = [
     title: 'Manage Accounts',
     links: [
       { label: 'Change Password', path: '/merchant/accounts/password' },
-      { label: 'Edit Account', path: '/merchant/accounts/edit' },
+      { label: 'View Account', path: '/merchant/accounts/view' },
     ],
   },
   {

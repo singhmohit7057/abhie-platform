@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabaseMerchant } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/Button'
 import { Eye, EyeOff } from 'lucide-react'
 
 export function MerchantChangePassword() {
-  const { signOut } = useAuth()
+  const { signOut } = useAuth(supabaseMerchant)
   const [form, setForm] = useState({ oldPassword: '', password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(false)
   const [show, setShow] = useState({ old: false, new: false, confirm: false })
@@ -26,19 +26,19 @@ export function MerchantChangePassword() {
       return setError('Password must be at least 6 characters')
     }
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabaseMerchant.auth.getUser()
     if (!user?.email) {
       setError('Unable to verify user')
       setLoading(false)
       return
     }
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email, password: form.oldPassword })
+    const { error: signInError } = await supabaseMerchant.auth.signInWithPassword({ email: user.email, password: form.oldPassword })
     if (signInError) {
       setError('Current password is incorrect')
       setLoading(false)
       return
     }
-    const { error: updateError } = await supabase.auth.updateUser({ password: form.password })
+    const { error: updateError } = await supabaseMerchant.auth.updateUser({ password: form.password })
     if (updateError) {
       setError(updateError.message.includes('different') ? 'New password cannot be same as old password' : updateError.message)
     } else {

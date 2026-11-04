@@ -28,6 +28,12 @@ export function MerchantViewCards() {
     return client?.name || '—'
   }
 
+  const getClientPhone = (cId: string | null) => {
+    if (!cId) return '—'
+    const client = clients.find(c => c.id === cId)
+    return (client as any)?.phone || '—'
+  }
+
   const openIssue = (card: Card) => {
     setSelectedCard(card)
     setClientId('')
@@ -43,9 +49,11 @@ export function MerchantViewCards() {
   }
 
   const columns = [
+    { key: 'sl', label: 'Sl. No.', render: (_c: Card, index: number) => index + 1 },
     { key: 'card_number', label: 'Card Number' },
     { key: 'card_type', label: 'Type' },
     { key: 'client_id', label: 'Issued To', render: (c: Card) => getClientName(c.client_id) },
+    { key: 'phone', label: 'Phone', render: (c: Card) => getClientPhone(c.client_id) },
     { key: 'points', label: 'Points' },
     { key: 'balance', label: 'Balance', render: (c: Card) => `₹${c.balance}` },
     {
