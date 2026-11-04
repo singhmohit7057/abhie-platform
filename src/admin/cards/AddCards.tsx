@@ -98,11 +98,6 @@ export function AddCards() {
         Last assigned card number: <strong>{lastCardNumber}</strong>
       </div>
 
-      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-        <strong>Card Format:</strong> ABHIE + [10=Offline / 20=Online] + [Series Code (8020250108)] + [4-digit sequence]
-        &nbsp;&nbsp;<span className="text-gray-900">|</span>&nbsp;&nbsp;
-        <span className="text-gray-900">Current Series: <strong>{prefix}</strong></span>
-      </div>
 
       <div className="rounded-lg border bg-white p-6">
         <form onSubmit={handleSubmit}>
@@ -132,7 +127,7 @@ export function AddCards() {
               <tr className="border-b border-gray-100">
                 <td className="py-3 pr-4 font-medium text-gray-700 whitespace-nowrap">To:</td>
                 <td className="py-3">
-                  <input className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" placeholder="End" type="number" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} required />
+                  <input className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none" placeholder="End" type="number" min={parseInt(form.from) + 1} value={form.to} onChange={(e) => { const v = e.target.value; if (v === '' || parseInt(v) > parseInt(form.from)) setForm({ ...form, to: v }) }} required />
                   {cardCount > 0 && <p className="mt-1 text-xs font-medium text-green-700">Total cards to create: {cardCount}</p>}
                 </td>
               </tr>

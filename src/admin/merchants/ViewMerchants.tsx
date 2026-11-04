@@ -32,16 +32,18 @@ export function ViewMerchants() {
       const { supabase } = await import('../../lib/supabase')
       const stats: Record<string, { total: number; start: string; end: string }> = {}
       for (const merchant of data) {
-        const { data: merchantCards } = await supabase
-          .from('cards')
-          .select('card_number')
-          .eq('merchant_id', merchant.id)
-          .order('card_number', { ascending: true })
-        if (merchantCards && merchantCards.length > 0) {
+        // Use count: 'exact' to get true count beyond the 1000 row limit
+        const [countRes, firstRes, lastRes] = await Promise.all([
+          supabase.from('cards').select('*', { count: 'exact', head: true }).eq('merchant_id', merchant.id),
+          supabase.from('cards').select('card_number').eq('merchant_id', merchant.id).order('card_number', { ascending: true }).limit(1),
+          supabase.from('cards').select('card_number').eq('merchant_id', merchant.id).order('card_number', { ascending: false }).limit(1),
+        ])
+        const total = countRes.count ?? 0
+        if (total > 0) {
           stats[merchant.id] = {
-            total: merchantCards.length,
-            start: merchantCards[0].card_number,
-            end: merchantCards[merchantCards.length - 1].card_number,
+            total,
+            start: firstRes.data?.[0]?.card_number || '',
+            end: lastRes.data?.[0]?.card_number || '',
           }
         } else {
           stats[merchant.id] = { total: 0, start: '', end: '' }
@@ -50,6 +52,9 @@ export function ViewMerchants() {
       setCardStats(stats)
     }
     fetchCardStats()
+    // Auto-refresh every 15 seconds to pick up card reassignments
+    const interval = setInterval(fetchCardStats, 15000)
+    return () => clearInterval(interval)
   }, [data])
 
   const getCardInfo = (merchantId: string) => {

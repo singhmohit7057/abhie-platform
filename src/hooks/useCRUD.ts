@@ -23,7 +23,7 @@ export function useCRUD<T extends { id: string }>({
     if (skip) { setData([]); setLoading(false); return }
     setLoading(true)
 
-    let query = supabase.from(table).select('*').order(orderBy, { ascending })
+    let query = supabase.from(table).select('*').order(orderBy, { ascending }).limit(10000)
 
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
